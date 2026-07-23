@@ -18,6 +18,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.tools.analysis_arena_window_utils import iter_window_dates, safe_rel
+from scripts.tools.brain2_rank_contract import RANK_INTEGRITY_INVALID_STATIC_ORDER
 
 
 DEFAULT_RUNS_ROOT = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS"
@@ -677,7 +678,11 @@ def _build_roster(
             **ledger,
             **candidate,
             **play,
-            "board_rank_tier": _board_rank_tier(ledger.get("board_rank", "")),
+            "board_rank_tier": (
+                _board_rank_tier(ledger.get("analytical_rank") or ledger.get("board_rank", ""))
+                if _bool01(ledger.get("rank_signal_valid"))
+                else "NOT_EVALUABLE"
+            ),
             "inventory_type": inventory.get("type", ledger.get("inventory_type", "")),
             "inventory_has_mirror_pair": inventory.get("has_mirror_pair", ledger.get("inventory_has_mirror_pair", "")),
             "inventory_mirror_pairs": inventory.get("mirror_pairs", ledger.get("inventory_mirror_pairs", "")),
@@ -744,6 +749,11 @@ def _summary_payload(window_root: Path, roster_payload: Dict[str, Any]) -> Dict[
     exact = [row for row in hits if _bool01(row.get("play_straight_hit"))]
     strict_box = [row for row in hits if _bool01(row.get("play_box_strict_hit"))]
     doubles = [row for row in hits if str(row.get("inventory_type") or "").strip() in {"double", "mirror_double", "triple"}]
+    rank_evaluable = any(
+        _bool01(row.get("rank_signal_valid"))
+        and bool(str(row.get("analytical_rank") or row.get("board_rank") or "").strip())
+        for row in all_rows
+    )
 
     def _budget_dist(rows: Sequence[Dict[str, Any]], key: str) -> Dict[str, int]:
         counter = Counter(str(row.get(key) or "").strip() or "_none_" for row in rows)
@@ -753,7 +763,11 @@ def _summary_payload(window_root: Path, roster_payload: Dict[str, Any]) -> Dict[
     compound_counter = Counter(str(row.get("compound_top_event") or "").strip() or "_none_" for row in hits if row.get("compound_top_event"))
     hit_class_counter = Counter(str(row.get("hit_primary_class") or "NONE") for row in hits)
     credit_signature_counter = Counter(str(row.get("credit_signature") or "NONE") for row in hits)
-    rank_tier_counter = Counter(str(row.get("board_rank_tier") or "OFF_BOARD") for row in hits)
+    rank_tier_counter = (
+        Counter(str(row.get("board_rank_tier") or "OFF_BOARD") for row in hits)
+        if rank_evaluable
+        else Counter()
+    )
     double_strength_counter = Counter(str(row.get("double_context_strength") or "_none_") for row in doubles)
 
     signal_keys = [
@@ -785,12 +799,15 @@ def _summary_payload(window_root: Path, roster_payload: Dict[str, Any]) -> Dict[
             key=lambda row: (
                 -_safe_int(row.get("arena_final_candidate_signature_score")),
                 BUDGET_ORDER.get(str(row.get("min_budget_box_any") or row.get("min_budget_inclusive") or ""), 99),
-                _safe_int(row.get("board_rank")),
+                str(row.get("date") or ""),
+                str(row.get("state_key") or ""),
             ),
         )
         return ordered[:limit]
 
     def _low_rank_rows(rows: Sequence[Dict[str, Any]], *, limit: int = 8) -> List[Dict[str, Any]]:
+        if not rank_evaluable:
+            return []
         ordered = sorted(rows, key=lambda row: (_safe_int(row.get("board_rank")) * -1, -_safe_int(row.get("arena_final_candidate_signature_score"))))
         return ordered[:limit]
 
@@ -813,13 +830,28 @@ def _summary_payload(window_root: Path, roster_payload: Dict[str, Any]) -> Dict[
             "credit_signature_counts": dict(credit_signature_counter),
         },
         "ranking": {
+            "status": "EVALUABLE" if rank_evaluable else "NOT_EVALUABLE",
+            "evaluable": rank_evaluable,
+            "reason": None if rank_evaluable else RANK_INTEGRITY_INVALID_STATIC_ORDER,
             "rank_tier_counts": dict(rank_tier_counter),
-            "median_rank_all_hits": _median_rank(hits),
-            "median_rank_high_conviction": _median_rank(high_conf),
-            "median_rank_vtrac_only": _median_rank(vtrac_only),
-            "top_primary_target_hits": sum(1 for row in hits if _bool01(row.get("top_primary_target"))),
-            "secondary_target_hits": sum(1 for row in hits if _bool01(row.get("secondary_target"))),
-            "best_clean_host_hits": sum(1 for row in hits if _bool01(row.get("best_clean_host"))),
+            "median_rank_all_hits": _median_rank(hits) if rank_evaluable else None,
+            "median_rank_high_conviction": _median_rank(high_conf) if rank_evaluable else None,
+            "median_rank_vtrac_only": _median_rank(vtrac_only) if rank_evaluable else None,
+            "top_primary_target_hits": (
+                sum(1 for row in hits if _bool01(row.get("top_primary_target")))
+                if rank_evaluable
+                else None
+            ),
+            "secondary_target_hits": (
+                sum(1 for row in hits if _bool01(row.get("secondary_target")))
+                if rank_evaluable
+                else None
+            ),
+            "best_clean_host_hits": (
+                sum(1 for row in hits if _bool01(row.get("best_clean_host")))
+                if rank_evaluable
+                else None
+            ),
             "highest_context_support_hits": sum(1 for row in hits if _bool01(row.get("highest_context_support_state"))),
         },
         "budgets": {
@@ -893,16 +925,20 @@ def _render_markdown(payload: Dict[str, Any], *, roster_csv_path: Path) -> str:
     lines.append("")
     lines.append("## 3. Ranking / State Targeting")
     lines.append("")
-    lines.append(
-        "- Rank tiers across credited hits: "
-        + (", ".join(f"`{k}` x{v}" for k, v in sorted(ranking["rank_tier_counts"].items())) or "_none_")
-    )
-    lines.append(f"- Median board rank, all hits: `{_format_float(ranking['median_rank_all_hits']) or 'n/a'}`")
-    lines.append(f"- Median board rank, high-conviction hits: `{_format_float(ranking['median_rank_high_conviction']) or 'n/a'}`")
-    lines.append(f"- Median board rank, VTRAC-only hits: `{_format_float(ranking['median_rank_vtrac_only']) or 'n/a'}`")
-    lines.append(f"- Top-primary-target hits: `{ranking['top_primary_target_hits']}`")
-    lines.append(f"- Secondary-target hits: `{ranking['secondary_target_hits']}`")
-    lines.append(f"- Best-clean-host hits: `{ranking['best_clean_host_hits']}`")
+    if not ranking.get("evaluable"):
+        lines.append("- Cross-state rank tiers, median winner rank, and rank-derived target hits: `NOT_EVALUABLE`.")
+        lines.append(f"- Reason: `{ranking.get('reason') or RANK_INTEGRITY_INVALID_STATIC_ORDER}`.")
+    else:
+        lines.append(
+            "- Rank tiers across credited hits: "
+            + (", ".join(f"`{k}` x{v}" for k, v in sorted(ranking["rank_tier_counts"].items())) or "_none_")
+        )
+        lines.append(f"- Median board rank, all hits: `{_format_float(ranking['median_rank_all_hits']) or 'n/a'}`")
+        lines.append(f"- Median board rank, high-conviction hits: `{_format_float(ranking['median_rank_high_conviction']) or 'n/a'}`")
+        lines.append(f"- Median board rank, VTRAC-only hits: `{_format_float(ranking['median_rank_vtrac_only']) or 'n/a'}`")
+        lines.append(f"- Top-primary-target hits: `{ranking['top_primary_target_hits']}`")
+        lines.append(f"- Secondary-target hits: `{ranking['secondary_target_hits']}`")
+        lines.append(f"- Best-clean-host hits: `{ranking['best_clean_host_hits']}`")
     lines.append(f"- Highest-context-support hits: `{ranking['highest_context_support_hits']}`")
     lines.append("")
     lines.append("## 4. Budget Floor")
@@ -968,17 +1004,21 @@ def _render_markdown(payload: Dict[str, Any], *, roster_csv_path: Path) -> str:
         "- Top signature hits: "
         + (
             ", ".join(
-                f"`{row['date']} {row['state_key']} {row['period']} {row['winner']}`[{row['hit_primary_class']}, {row['arena_final_candidate_signature']}, rank {row['board_rank'] or 'n/a'}]"
+                f"`{row['date']} {row['state_key']} {row['period']} {row['winner']}`[{row['hit_primary_class']}, {row['arena_final_candidate_signature']}]"
                 for row in sig["top_signature_hits"][:8]
             )
             or "_none_"
         )
     )
     lines.append(
-        "- Low-rank but converted hits: "
+        (
+            "- Low-rank but converted hits: "
+            if ranking.get("evaluable")
+            else "- Low-rank converted-hit analysis: `NOT_EVALUABLE`; "
+        )
         + (
             ", ".join(
-                f"`{row['date']} {row['state_key']} {row['period']} {row['winner']}`[{row['hit_primary_class']}, rank {row['board_rank'] or 'n/a'}]"
+                f"`{row['date']} {row['state_key']} {row['period']} {row['winner']}`[{row['hit_primary_class']}, analytical rank {row['board_rank'] or 'n/a'}]"
                 for row in sig["low_rank_hits"][:8]
             )
             or "_none_"
@@ -988,7 +1028,7 @@ def _render_markdown(payload: Dict[str, Any], *, roster_csv_path: Path) -> str:
         "- VTRAC-only examples: "
         + (
             ", ".join(
-                f"`{row['date']} {row['state_key']} {row['period']} {row['winner']}`[rank {row['board_rank'] or 'n/a'}, min {row['min_budget_inclusive'] or 'n/a'}]"
+                f"`{row['date']} {row['state_key']} {row['period']} {row['winner']}`[min {row['min_budget_inclusive'] or 'n/a'}]"
                 for row in sig["vtrac_only_examples"][:8]
             )
             or "_none_"

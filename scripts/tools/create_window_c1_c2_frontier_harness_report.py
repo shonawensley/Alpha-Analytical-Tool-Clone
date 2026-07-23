@@ -20,6 +20,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.tools.analysis_arena_window_utils import iter_window_dates, safe_rel
+from scripts.tools.brain2_rank_contract import RANK_INTEGRITY_INVALID_STATIC_ORDER
 
 
 DEFAULT_WINNER_HTML_ROOT = REPO_ROOT / "reports" / "stable" / "winners_by_date"
@@ -307,9 +308,18 @@ def _channel_counts_from_tags(tags: set[str]) -> Dict[str, float]:
 
 
 def _aggregate_event_context(ledger_rows: Sequence[Dict[str, str]], hit_rows: Sequence[Dict[str, str]]) -> Dict[str, Any]:
-    board_ranks = sorted(
-        {_safe_int(row.get("board_rank")) for row in ledger_rows if _safe_int(row.get("board_rank")) > 0}
+    rank_evaluable = any(
+        _bool01(row.get("rank_signal_valid"))
+        and bool(str(row.get("analytical_rank") or row.get("board_rank") or "").strip())
+        for row in ledger_rows
     )
+    board_ranks = sorted(
+        {
+            _safe_int(row.get("analytical_rank") or row.get("board_rank"))
+            for row in ledger_rows
+            if rank_evaluable and _safe_int(row.get("analytical_rank") or row.get("board_rank")) > 0
+        }
+    ) if rank_evaluable else []
     matched_periods = sorted({str(row.get("period") or "").strip() for row in ledger_rows if str(row.get("period") or "").strip()})
     credited_periods = sorted({str(row.get("period") or "").strip() for row in hit_rows if str(row.get("period") or "").strip()})
 
@@ -343,11 +353,25 @@ def _aggregate_event_context(ledger_rows: Sequence[Dict[str, str]], hit_rows: Se
         "matched_periods": matched_periods,
         "credited_event_count": len(hit_rows),
         "credited_periods": credited_periods,
-        "best_board_rank": board_ranks[0] if board_ranks else 0,
-        "board_rank_list": ",".join(str(rank) for rank in board_ranks),
-        "top_primary_target_any": any(_bool01(row.get("top_primary_target")) for row in ledger_rows),
-        "secondary_target_any": any(_bool01(row.get("secondary_target")) for row in ledger_rows),
-        "best_clean_host_any": any(_bool01(row.get("best_clean_host")) for row in ledger_rows),
+        "rank_evaluation_status": "EVALUABLE" if rank_evaluable else "NOT_EVALUABLE",
+        "rank_evaluation_reason": None if rank_evaluable else RANK_INTEGRITY_INVALID_STATIC_ORDER,
+        "best_board_rank": board_ranks[0] if board_ranks else None,
+        "board_rank_list": ",".join(str(rank) for rank in board_ranks) if rank_evaluable else "",
+        "top_primary_target_any": (
+            any(_bool01(row.get("top_primary_target")) for row in ledger_rows)
+            if rank_evaluable
+            else None
+        ),
+        "secondary_target_any": (
+            any(_bool01(row.get("secondary_target")) for row in ledger_rows)
+            if rank_evaluable
+            else None
+        ),
+        "best_clean_host_any": (
+            any(_bool01(row.get("best_clean_host")) for row in ledger_rows)
+            if rank_evaluable
+            else None
+        ),
         "highest_context_support_any": any(_bool01(row.get("highest_context_support_state")) for row in ledger_rows),
         "play_card_any_box_any": any(_bool01(row.get("play_card_any_box")) for row in ledger_rows),
         "play_card_any_exact_any": any(_bool01(row.get("play_card_any_exact")) for row in ledger_rows),
@@ -604,6 +628,8 @@ def _case_from_payload(
         "matched_periods": ",".join(event_context["matched_periods"]),
         "credited_event_count": event_context["credited_event_count"],
         "credited_periods": ",".join(event_context["credited_periods"]),
+        "rank_evaluation_status": event_context["rank_evaluation_status"],
+        "rank_evaluation_reason": event_context["rank_evaluation_reason"],
         "best_board_rank": event_context["best_board_rank"],
         "board_rank_list": event_context["board_rank_list"],
         "top_primary_target_any": event_context["top_primary_target_any"],
@@ -919,7 +945,11 @@ def _render_markdown(payload: Dict[str, Any], cases: Sequence[Dict[str, Any]]) -
             f"`{row['frontier_signature_type']}` "
             f"strength=`{row['frontier_strength_score']}` "
             f"hit=`{row['hit_class_rollup']}` "
-            f"rank=`{row['best_board_rank'] or '-'}`"
+            + (
+                f"analytical_rank=`{row['best_board_rank']}`"
+                if row.get("rank_evaluation_status") == "EVALUABLE"
+                else "analytical_rank=`NOT_EVALUABLE`"
+            )
         )
 
     if meta["warnings"]:

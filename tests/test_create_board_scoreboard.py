@@ -129,7 +129,7 @@ def test_build_board_scoreboard_payload_and_files(tmp_path: Path) -> None:
     overlay = _overlay_fixture()
     payload = build_board_scoreboard_payload(overlay)
 
-    assert payload["schema_version"] == "board_scoreboard_v0"
+    assert payload["schema_version"] == "board_scoreboard_v1"
     rows = payload["scoreboard_rows"]
     assert rows[0]["state_key"] == "Virginia4"
     assert rows[0]["profit_alert_hint"].startswith("A02")
@@ -139,15 +139,19 @@ def test_build_board_scoreboard_payload_and_files(tmp_path: Path) -> None:
     assert rows[0]["r_consensus_hint"].startswith("tail:22|ev:2|2d:2|xvar|trial|strong")
     assert rows[0]["positional_hint"] == "Mirror-Echo active"
     assert rows[1]["targeting_bucket"] == "tight_core"
+    assert all(row["analytical_rank"] is None for row in rows)
+    assert all(row["rank_signal_valid"] is False for row in rows)
 
     verdict = payload["board_verdict"]
-    assert verdict["top_primary_target"] == "Virginia4"
-    assert verdict["best_clean_host"] == "NewJersey4"
+    assert verdict["top_primary_target"] is None
+    assert verdict["best_clean_host"] is None
+    assert verdict["rank_evaluation"]["status"] == "NOT_EVALUABLE"
     assert verdict["highest_context_support_state"] == "Virginia4"
     assert verdict["direct_cross_state_receipts"][0]["state_a"] == "NewJersey4"
 
     md = build_board_scoreboard_markdown(payload)
     assert "Board Scoreboard" in md
+    assert "INVALID_STATIC_ORDER" in md
     assert "Direct Cross-State Receipts" in md
     assert "Virginia4" in md and "NewJersey4" in md
 
@@ -158,4 +162,4 @@ def test_build_board_scoreboard_payload_and_files(tmp_path: Path) -> None:
     assert json_path is not None and json_path.exists()
 
     reloaded = json.loads(json_path.read_text(encoding="utf-8"))
-    assert reloaded["board_verdict"]["top_primary_target"] == "Virginia4"
+    assert reloaded["board_verdict"]["top_primary_target"] is None

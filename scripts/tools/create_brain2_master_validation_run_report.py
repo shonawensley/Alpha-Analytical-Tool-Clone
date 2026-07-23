@@ -30,6 +30,17 @@ from typing import Any, Dict, Iterable, List, Mapping, Sequence
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.tools.brain2_rank_contract import (
+    RANK_INTEGRITY_INVALID_STATIC_ORDER,
+    analytical_rank,
+    input_order_key,
+    rank_evaluation_status,
+    unavailable_rank_contract,
+)
+
 RUNS_DIR = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS"
 RUNS2_DIR = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"
 TEMPLATE_PATH = (
@@ -443,10 +454,12 @@ def _fmt_list(items: Sequence[str], *, empty: str = "_none_") -> str:
 
 def _top_scoreboard_rows(rows: Sequence[dict[str, Any]], *, limit: int = 5) -> list[str]:
     out: list[str] = []
-    for row in sorted(rows, key=lambda r: int(r.get("score_rank") or 9999))[:limit]:
+    for row in sorted(rows, key=input_order_key)[:limit]:
         canon = ", ".join((row.get("top_canonicals") or [])[:3]) or "-"
         out.append(
-            f"`#{row.get('score_rank')} {row.get('state_key')}` role=`{row.get('role')}` "
+            f"`input={row.get('input_order') or row.get('input_rank') or '-'} {row.get('state_key')}` "
+            f"legacy_rank=`{row.get('legacy_static_rank') or row.get('score_rank') or '-'}` "
+            f"analytical_rank=`{analytical_rank(row) or '-'}` role=`{row.get('role')}` "
             f"bucket=`{row.get('targeting_bucket')}` tracker=`{row.get('tracker_posture')}` "
             f"canonicals=`{canon}`"
         )
@@ -457,7 +470,7 @@ def _scoreboard_state_rank_map(rows: Sequence[dict[str, Any]]) -> dict[str, int]
     out: dict[str, int] = {}
     for row in rows:
         state_key = str(row.get("state_key") or "").strip()
-        rank = safe_int(row.get("score_rank"))
+        rank = analytical_rank(row)
         if state_key and rank is not None:
             out[state_key] = rank
     return out
@@ -652,14 +665,16 @@ def _scoreboard_hint_rows(
     limit: int = 8,
 ) -> list[dict[str, Any]]:
     out: list[dict[str, Any]] = []
-    for row in sorted(scoreboard_rows, key=lambda item: int(item.get("score_rank") or 9999)):
+    for row in sorted(scoreboard_rows, key=input_order_key):
         value = str(row.get(hint_key) or "").strip()
         if not value:
             continue
         out.append(
             {
                 "state_key": str(row.get("state_key") or "").strip(),
-                "board_rank": safe_int(row.get("score_rank")),
+                "board_rank": analytical_rank(row),
+                "legacy_static_rank": safe_int(row.get("legacy_static_rank") or row.get("score_rank")),
+                "input_order": safe_int(row.get("input_order") or row.get("input_rank")),
                 "role": str(row.get("role") or "").strip(),
                 "targeting_bucket": str(row.get("targeting_bucket") or "").strip(),
                 "hint": value,
@@ -714,7 +729,7 @@ def _daily_double_events(
                 continue
             out.append(
                 f"`{state_key}` `{period_key}` winner=`{winner}` type=`{kind}` "
-                f"rank=`{rank_by_state.get(state_key, '-')}` DS=`{ds}` mirror_pairs=`{','.join(mirror_pairs) or '-'}`"
+                f"analytical_rank=`{rank_by_state.get(state_key, '-')}` DS=`{ds}` mirror_pairs=`{','.join(mirror_pairs) or '-'}`"
             )
     return out
 
@@ -739,7 +754,7 @@ def _daily_double_events_from_inventory(
             continue
         out.append(
             f"`{state_key}` `{period}` winner=`{winner}` type=`{event_type}` "
-            f"rank=`{rank_by_state.get(state_key, '-')}` mirror_pairs=`{row.get('mirror_pairs') or '-'}`"
+            f"analytical_rank=`{rank_by_state.get(state_key, '-')}` mirror_pairs=`{row.get('mirror_pairs') or '-'}`"
         )
     return out
 
@@ -884,7 +899,7 @@ def build_brain2_tracker_ledger(
     ]
     predictive_sources = tracker_source_registry.get("predictive", {}).get("artifacts", {})
     return {
-        "schema_version": "brain2_tracker_ledger_v1",
+        "schema_version": "brain2_tracker_ledger_v2",
         "metadata": {
             "results_date": results_date,
             "history_date": history_date,
@@ -899,7 +914,10 @@ def build_brain2_tracker_ledger(
             "truth_control_center_dir": _safe_rel(truth_control_center_dir),
             "doubles_inventory_md": _safe_rel(doubles_inventory_md) if doubles_inventory_md else "",
             "doubles_inventory_csv": _safe_rel(doubles_inventory_csv) if doubles_inventory_csv else "",
+            "rank_integrity_status": RANK_INTEGRITY_INVALID_STATIC_ORDER,
         },
+        "rank_contract": unavailable_rank_contract(),
+        "rank_evaluation": rank_evaluation_status(scoreboard_rows),
         "source_registry": dict(tracker_source_registry),
         "truth_evaluation": {
             "claim_class": "post_result_evaluation",
@@ -920,6 +938,7 @@ def build_brain2_tracker_ledger(
             "play_states": list(shadow_verdict.get("play_states") or []),
             "watch_states": list(shadow_verdict.get("watch_states") or []),
             "skip_states": list(shadow_verdict.get("skip_states") or []),
+            "unresolved_states": list(shadow_verdict.get("unresolved_states") or []),
         },
         "profit_alerts": {
             "available": bool(predictive_sources.get("profit_alerts", {}).get("available")),
@@ -1009,6 +1028,7 @@ def build_brain2_master_validation_report(
     source_integrity = tracker_source_registry.get("integrity", {})
     truth_sources = tracker_source_registry.get("truth", {}).get("artifacts", {})
     rank_by_state = _scoreboard_state_rank_map(scoreboard_rows)
+    rank_evaluation = rank_evaluation_status(scoreboard_rows)
     top_rows = _top_scoreboard_rows(scoreboard_rows)
     direct_receipts = board_verdict.get("direct_cross_state_receipts") or []
     strongest_pairs = []
@@ -1038,6 +1058,7 @@ def build_brain2_master_validation_report(
     play_states = shadow_verdict.get("play_states") or []
     watch_states = shadow_verdict.get("watch_states") or []
     skip_states = shadow_verdict.get("skip_states") or []
+    unresolved_states = shadow_verdict.get("unresolved_states") or []
 
     lines: list[str] = []
     lines.append(f"# Brain 2 Master Validation Run Report — D={results_date} (H={history_date})")
@@ -1104,13 +1125,14 @@ def build_brain2_master_validation_report(
         )
     lines.append("")
     lines.append("## Quick Auto-Captured Anchors")
-    lines.append(f"- Top scoreboard rows: {'; '.join(top_rows) if top_rows else '_none_'}")
+    lines.append(f"- Board evidence rows (input order; legacy rank diagnostic-only): {'; '.join(top_rows) if top_rows else '_none_'}")
     lines.append(f"- Board verdict top_primary_target: `{board_verdict.get('top_primary_target') or '-'}`")
     lines.append(f"- Board verdict secondary_target: `{board_verdict.get('secondary_target') or '-'}`")
     lines.append(f"- Board verdict best_clean_host: `{board_verdict.get('best_clean_host') or '-'}`")
     lines.append(f"- Board verdict highest_context_support_state: `{board_verdict.get('highest_context_support_state') or '-'}`")
     lines.append(f"- Shadow DPL play states: {_fmt_list(play_states)}")
     lines.append(f"- Shadow DPL watch states: {_fmt_list(watch_states)}")
+    lines.append(f"- Shadow DPL unresolved states: {_fmt_list(unresolved_states)}")
     lines.append(f"- Daily doubles / mirror doubles detected: {_fmt_list(daily_double_events, empty='_none detected_')}")
     lines.append("")
     lines.append("---")
@@ -1146,7 +1168,7 @@ def build_brain2_master_validation_report(
     add_section(
         "Part B — Board Outcome Map",
         [
-            f"top scoreboard anchors: {'; '.join(top_rows[:3]) if top_rows else '_none_'}",
+            f"board evidence anchors (input order): {'; '.join(top_rows[:3]) if top_rows else '_none_'}",
             f"daily doubles / mirror doubles on the day: {_fmt_list(daily_double_events, empty='_none_')}",
             f"direct cross-state receipts surfaced by board verdict: {_fmt_list([str(x) for x in direct_receipts], empty='_none_')}",
         ],
@@ -1160,9 +1182,10 @@ def build_brain2_master_validation_report(
     )
 
     add_section(
-        "Part C — Scoreboard And Ranking Evaluation",
+        "Part C — Board Evidence And Rank Integrity Evaluation",
         [
-            f"top scoreboard rows that mattered: {'; '.join(top_rows) if top_rows else '_none_'}",
+            f"rank evaluation status: `{rank_evaluation.get('status')}` reason=`{rank_evaluation.get('reason') or '-'}`",
+            f"board evidence rows (not analytically ranked): {'; '.join(top_rows) if top_rows else '_none_'}",
             f"top_primary_target=`{board_verdict.get('top_primary_target') or '-'}` secondary_target=`{board_verdict.get('secondary_target') or '-'}`",
             f"best_clean_host=`{board_verdict.get('best_clean_host') or '-'}` highest_context_support_state=`{board_verdict.get('highest_context_support_state') or '-'}`",
             f"tight_core_states={_fmt_list(board_verdict.get('tight_core_states') or [], empty='-')}",
@@ -1170,10 +1193,10 @@ def build_brain2_master_validation_report(
             f"small_shoulder_states={_fmt_list(board_verdict.get('small_shoulder_states') or [], empty='-')}",
         ],
         [
-            "highest-converting actual state rank(s): `...`",
-            "bucket quality notes: `...`",
-            "did the scoreboard ranking help or distort the day?: `...`",
-            "most important scoreboard lesson: `...`",
+            "analytical rank conclusion: `NOT_EVALUABLE — INVALID_STATIC_ORDER`",
+            "rank-independent bucket and structural-evidence notes: `...`",
+            "legacy ordering distortion notes (diagnostic only): `...`",
+            "requirements for a future evidence-derived shadow ranker: `...`",
         ],
     )
 
@@ -1246,9 +1269,9 @@ def build_brain2_master_validation_report(
     )
 
     add_section(
-        "Part H — Due Doubles Ranked-State Evaluation",
+        "Part H — Due Doubles Mechanism-Specific State Evaluation",
         [
-            f"ranked due states reviewed (DS>=3): {'; '.join(due_threshold) if due_threshold else '_none_'}",
+            f"due-mechanism states reviewed by Draws Since Double (DS>=3): {'; '.join(due_threshold) if due_threshold else '_none_'}",
             f"top due states that converted in-family: {'; '.join(_due_converting_rows(truth_due_rows)) or '_none / truth receipt unavailable_'}",
             f"due doubles source: `{_safe_rel(predictive_control_center_dir / 'due_doubles.csv')}`",
         ],
@@ -1257,7 +1280,7 @@ def build_brain2_master_validation_report(
             "threshold states (3 draws missing) that converted: `...`",
             "important due families / examples that converted: `...`",
             "conversion class notes: `...`",
-            "most important due-doubles ranking lesson: `...`",
+            "most important due-doubles mechanism-order lesson: `...`",
         ],
     )
 
@@ -1281,15 +1304,15 @@ def build_brain2_master_validation_report(
             f"play states: {_fmt_list(play_states)}",
             f"watch states: {_fmt_list(watch_states)}",
             f"skip states: {_fmt_list(skip_states)}",
+            f"unresolved states: {_fmt_list(unresolved_states)}",
             f"top useful reason codes: {'; '.join(_top_reason_codes(state_decisions)) or '_none_'}",
             f"top_play_state=`{shadow_verdict.get('top_play_state') or '-'}` top_watch_state=`{shadow_verdict.get('top_watch_state') or '-'}`",
         ],
         [
-            "watch states that should maybe have been play: `...`",
-            "play states that were overpromoted: `...`",
-            "mode / cap quality: `...`",
-            "most important misleading reason codes: `...`",
-            "most important DPL lesson: `...`",
+            "rank-dependent DPL conclusion: `NOT_EVALUABLE — decisions remain UNRESOLVED`",
+            "rank-independent structural modes worth preserving: `...`",
+            "independent hard blockers (for example locally spent) observed: `...`",
+            "most important DPL quarantine lesson: `...`",
         ],
     )
 

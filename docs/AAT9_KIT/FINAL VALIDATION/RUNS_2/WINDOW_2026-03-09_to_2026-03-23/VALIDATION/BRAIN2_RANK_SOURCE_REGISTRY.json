@@ -1,0 +1,203 @@
+{
+  "analytical_rank_status": "INVALID_STATIC_ORDER",
+  "generated_at": "2026-07-23T03:44:47+00:00",
+  "replacement_ranker_introduced": false,
+  "schema_version": "brain2_rank_source_registry_v1",
+  "sources": [
+    {
+      "available_or_displayed": true,
+      "fields": [
+        "legacy_static_rank",
+        "legacy_priority_score",
+        "score_rank",
+        "priority_score"
+      ],
+      "formula": "input-order points + spent adjustment + direct-cross adjustment - overlap adjustment",
+      "historical_influence_paths": [
+        "ordering",
+        "top-target labels",
+        "Shadow DPL posture",
+        "caps",
+        "rank reports"
+      ],
+      "historically_influential": true,
+      "input_provenance": "Arena state summaries, relationship receipts, caller state order, optional Midday outcomes",
+      "phase2_treatment": "preserve relationship/spent evidence; quarantine rank and score as diagnostic-only",
+      "producer": "scripts/tools/build_board_spillover_overlay.py::_build_board_summary",
+      "scope": "cross_state_board",
+      "source_id": "brain2_legacy_board_priority",
+      "timing_class": "PRE_MIDDAY_OR_POST_MIDDAY_PRE_EVENING_BY_INVOCATION",
+      "validity_class": "INVALID_STATIC_ORDER"
+    },
+    {
+      "available_or_displayed": true,
+      "fields": [
+        "arena_rank"
+      ],
+      "formula": "inherits board score_rank, then candidate-union and alert tie-breaks",
+      "historical_influence_paths": [
+        "portfolio ordering"
+      ],
+      "historically_influential": true,
+      "input_provenance": "Brain 2 scoreboard plus predictive Candidate Universe and Profit Alerts",
+      "phase2_treatment": "superseded for analytical rank evaluation",
+      "producer": "scripts/tools/create_predictive_portfolio_report.py::main",
+      "scope": "cross_state_portfolio",
+      "source_id": "predictive_portfolio_arena_first",
+      "timing_class": "PRE_RESULT",
+      "validity_class": "INHERITS_INVALID_STATIC_ORDER"
+    },
+    {
+      "available_or_displayed": true,
+      "fields": [
+        "candidate_top_support",
+        "candidate_union",
+        "due_doubles_count",
+        "candidate_packs"
+      ],
+      "formula": "top support desc, union burden asc, due doubles desc, packs desc, state key",
+      "historical_influence_paths": [
+        "portfolio ordering",
+        "portfolio-vs-results evaluation"
+      ],
+      "historically_influential": true,
+      "input_provenance": "predictive Candidate Universe, Play Card, and due-double receipts",
+      "phase2_treatment": "retain as named legacy control-arm heuristic; do not promote to Brain 2 analytical rank",
+      "producer": "scripts/tools/create_predictive_portfolio_report.py::main",
+      "scope": "cross_state_control_arm",
+      "source_id": "predictive_portfolio_tool_first",
+      "timing_class": "PRE_RESULT",
+      "validity_class": "UNVALIDATED_HEURISTIC"
+    },
+    {
+      "available_or_displayed": true,
+      "fields": [
+        "alerts_count",
+        "alerts_strength_sum_top",
+        "candidate_union"
+      ],
+      "formula": "alert count desc, top-alert strength desc, candidate union asc, state key",
+      "historical_influence_paths": [
+        "portfolio ordering"
+      ],
+      "historically_influential": true,
+      "input_provenance": "predictive Control Center Profit Alerts and Candidate Universe",
+      "phase2_treatment": "retain as named diagnostic heuristic; do not promote to Brain 2 analytical rank",
+      "producer": "scripts/tools/create_predictive_portfolio_report.py::main",
+      "scope": "cross_state_control_arm",
+      "source_id": "predictive_portfolio_profit_alerts",
+      "timing_class": "PRE_RESULT",
+      "validity_class": "UNVALIDATED_HEURISTIC"
+    },
+    {
+      "available_or_displayed": true,
+      "fields": [
+        "rank"
+      ],
+      "formula": "same pre-result tool_first ordering, graded after outcomes are available",
+      "historical_influence_paths": [],
+      "historically_influential": false,
+      "input_provenance": "frozen predictive Candidate Universe and Play Card, then winner truth for grading",
+      "phase2_treatment": "retain as historical control-arm evaluation only",
+      "producer": "scripts/tools/create_portfolio_vs_results_report.py::_rank_key",
+      "scope": "cross_state_evaluation",
+      "source_id": "portfolio_vs_results_tool_first",
+      "timing_class": "PRE_RESULT_RANK_POST_RESULT_EVALUATION",
+      "validity_class": "UNVALIDATED_HEURISTIC_EVALUATION"
+    },
+    {
+      "available_or_displayed": true,
+      "fields": [
+        "baseline_tool_first",
+        "pressure_tiebreak"
+      ],
+      "formula": "Candidate Universe heuristic with optional Aux pressure tie-break",
+      "historical_influence_paths": [],
+      "historically_influential": false,
+      "input_provenance": "frozen predictive Candidate Universe, Aux pressure, and Play Card",
+      "phase2_treatment": "retain as experiment; not a current Brain 2 rank source",
+      "producer": "scripts/tools/superbrain_config_harness.py::_rank_key",
+      "scope": "cross_state_experiment",
+      "source_id": "superbrain_experimental_rankers",
+      "timing_class": "PRE_RESULT_RANK_POST_RESULT_HARNESS",
+      "validity_class": "EXPERIMENTAL_UNVALIDATED"
+    },
+    {
+      "available_or_displayed": true,
+      "fields": [
+        "legacy_static_rank",
+        "legacy_priority_score"
+      ],
+      "formula": "legacy board formula after Midday spent-status enrichment",
+      "historical_influence_paths": [
+        "competition rerank",
+        "Evening shadow decision"
+      ],
+      "historically_influential": true,
+      "input_provenance": "frozen predictive evidence plus known Midday outcomes",
+      "phase2_treatment": "keep distinct from pre-Midday rank; quarantine strongest-state claims",
+      "producer": "scripts/tools/build_board_spillover_overlay.py::_build_board_summary",
+      "scope": "period_specific_board",
+      "source_id": "post_midday_competition_priority",
+      "timing_class": "POST_MIDDAY_PRE_EVENING",
+      "validity_class": "DECISION_TIME_SPECIFIC_LEGACY_PRIORITY"
+    },
+    {
+      "available_or_displayed": true,
+      "fields": [
+        "candidate rank",
+        "canonical rank",
+        "VTRAC rank",
+        "signal rank"
+      ],
+      "formula": "tool-specific",
+      "historical_influence_paths": [
+        "within-state candidate preservation and control-arm combination forming"
+      ],
+      "historically_influential": true,
+      "input_provenance": "within-state predictive tool evidence",
+      "phase2_treatment": "preserve unchanged; never reinterpret as cross-state analytical rank",
+      "producer": "Stable/Digit Reduction/VTRAC/Hot Zones/Arena/Candidate Universe/Play Card producers",
+      "scope": "within_state_candidate_or_lane",
+      "source_id": "tool_local_candidate_ranks",
+      "timing_class": "PRE_RESULT",
+      "validity_class": "OUT_OF_SCOPE_NOT_A_STATE_RANK"
+    },
+    {
+      "available_or_displayed": true,
+      "fields": [
+        "draws_since_double rank"
+      ],
+      "formula": "draws since double desc within period/board",
+      "historical_influence_paths": [
+        "due-double context and audits"
+      ],
+      "historically_influential": true,
+      "input_provenance": "historical draw cadence",
+      "phase2_treatment": "preserve as mechanism-specific context only",
+      "producer": "scripts/tools/export_control_center_sharepack.py and due-doubles audits",
+      "scope": "mechanism_specific_state_context",
+      "source_id": "due_doubles_state_order",
+      "timing_class": "PRE_RESULT",
+      "validity_class": "VALID_MECHANISM_CONTEXT_NOT_GLOBAL_STATE_RANK"
+    },
+    {
+      "available_or_displayed": true,
+      "fields": [
+        "review priority",
+        "hit rank",
+        "gap priority"
+      ],
+      "formula": "truth-aware diagnostic ordering",
+      "historical_influence_paths": [],
+      "historically_influential": false,
+      "input_provenance": "predictive artifacts plus known outcomes",
+      "phase2_treatment": "preserve but label truth-aware; never use for predictive Capture@K",
+      "producer": "Deep Review templates and truth-aware review reports",
+      "scope": "review_only",
+      "source_id": "post_result_deep_review_priority",
+      "timing_class": "POST_RESULT",
+      "validity_class": "VALID_REVIEW_PRIORITY_NOT_PREDICTIVE_RANK"
+    }
+  ]
+}

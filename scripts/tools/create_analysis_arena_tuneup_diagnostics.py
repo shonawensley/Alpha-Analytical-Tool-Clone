@@ -18,6 +18,11 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.tools.analysis_arena_window_utils import iter_window_dates, load_scoreboard, safe_rel
+from scripts.tools.brain2_rank_contract import (
+    RANK_INTEGRITY_INVALID_STATIC_ORDER,
+    analytical_rank,
+    rank_evaluation_status,
+)
 
 
 DEFAULT_RUNS2_ROOT = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"
@@ -197,6 +202,7 @@ def build_payload(window_roots: Sequence[Path]) -> Dict[str, Any]:
     tracker_hit_rows: List[Dict[str, str]] = []
     translator_rows: List[Dict[str, str]] = []
     window_summaries: List[Dict[str, Any]] = []
+    ranking_contract_rows: List[Dict[str, Any]] = []
 
     for window_root in window_roots:
         stem = _window_stem(window_root)
@@ -211,8 +217,21 @@ def build_payload(window_roots: Sequence[Path]) -> Dict[str, Any]:
         for date in iter_window_dates(window_root):
             scoreboard = load_scoreboard(window_root, date)
             verdict = scoreboard.get("board_verdict") or {}
-            top_primary = str(verdict.get("top_primary_target") or "").strip()
-            best_clean = str(verdict.get("best_clean_host") or "").strip()
+            scoreboard_rows = [
+                row for row in (scoreboard.get("scoreboard_rows") or []) if isinstance(row, dict)
+            ]
+            ranking_contract_rows.extend(scoreboard_rows)
+            day_rank_evaluation = rank_evaluation_status(scoreboard_rows)
+            top_primary = (
+                str(verdict.get("top_primary_target") or "").strip()
+                if day_rank_evaluation["evaluable"]
+                else ""
+            )
+            best_clean = (
+                str(verdict.get("best_clean_host") or "").strip()
+                if day_rank_evaluation["evaluable"]
+                else ""
+            )
             context = str(verdict.get("highest_context_support_state") or "").strip()
             if top_primary:
                 ranking_state[top_primary]["top_primary_days"] += 1
@@ -224,9 +243,10 @@ def build_payload(window_roots: Sequence[Path]) -> Dict[str, Any]:
             if context:
                 ranking_state[context]["highest_context_days"] += 1
                 ranking_state[context]["windows"].add(window_root.name)
-            for row in (scoreboard.get("scoreboard_rows") or [])[:5]:
+            for row in scoreboard_rows:
                 state_key = str(row.get("state_key") or "").strip()
-                if state_key:
+                rank = analytical_rank(row)
+                if state_key and rank is not None and rank <= 5:
                     ranking_state[state_key]["top5_board_days"] += 1
                     ranking_state[state_key]["windows"].add(window_root.name)
 
@@ -249,7 +269,11 @@ def build_payload(window_roots: Sequence[Path]) -> Dict[str, Any]:
                 info["strict_box_hits"] += 1
             if str(row.get("hit_primary_class") or "").strip() == "VTRAC_ONLY":
                 info["vtrac_only_hits"] += 1
-            rank = _as_int(row.get("board_rank"))
+            rank = (
+                _as_int(row.get("analytical_rank") or row.get("board_rank"))
+                if _truthy(row.get("rank_signal_valid"))
+                else 0
+            )
             if rank > 0:
                 info["hit_ranks"].append(rank)
             if _truthy(row.get("play_straight_hit")) or _truthy(row.get("play_box_strict_hit")):
@@ -265,6 +289,7 @@ def build_payload(window_roots: Sequence[Path]) -> Dict[str, Any]:
             }
         )
 
+    ranking_evaluation = rank_evaluation_status(ranking_contract_rows)
     ranking_rows: List[Dict[str, Any]] = []
     for state_key, info in sorted(ranking_state.items()):
         row = {
@@ -274,27 +299,44 @@ def build_payload(window_roots: Sequence[Path]) -> Dict[str, Any]:
             "straight_hits": info["straight_hits"],
             "strict_box_hits": info["strict_box_hits"],
             "vtrac_only_hits": info["vtrac_only_hits"],
-            "top_primary_days": info["top_primary_days"],
-            "best_clean_host_days": info["best_clean_host_days"],
+            "top_primary_days": info["top_primary_days"] if ranking_evaluation["evaluable"] else None,
+            "best_clean_host_days": info["best_clean_host_days"] if ranking_evaluation["evaluable"] else None,
             "highest_context_days": info["highest_context_days"],
-            "top5_board_days": info["top5_board_days"],
-            "median_hit_rank": _median(info["hit_ranks"]),
-            "median_high_conviction_rank": _median(info["high_conviction_ranks"]),
+            "top5_board_days": info["top5_board_days"] if ranking_evaluation["evaluable"] else None,
+            "median_hit_rank": _median(info["hit_ranks"]) if ranking_evaluation["evaluable"] else None,
+            "median_high_conviction_rank": (
+                _median(info["high_conviction_ranks"]) if ranking_evaluation["evaluable"] else None
+            ),
             "high_conviction_hits": info["straight_hits"] + info["strict_box_hits"],
-            "top_primary_minus_high_conviction": info["top_primary_days"] - (info["straight_hits"] + info["strict_box_hits"]),
-            "credited_minus_primary": info["credited_hits"] - info["top_primary_days"],
+            "top_primary_minus_high_conviction": (
+                info["top_primary_days"] - (info["straight_hits"] + info["strict_box_hits"])
+                if ranking_evaluation["evaluable"]
+                else None
+            ),
+            "credited_minus_primary": (
+                info["credited_hits"] - info["top_primary_days"]
+                if ranking_evaluation["evaluable"]
+                else None
+            ),
             "window_count": len(info["windows"]),
+            "rank_integrity_status": (
+                "VALID" if ranking_evaluation["evaluable"] else RANK_INTEGRITY_INVALID_STATIC_ORDER
+            ),
         }
         ranking_rows.append(row)
 
-    false_positive_top = sorted(
-        [row for row in ranking_rows if row["top_primary_days"] > 0],
-        key=lambda row: (-int(row["top_primary_minus_high_conviction"]), -int(row["top_primary_days"]), int(row["credited_hits"])),
-    )[:8]
-    productive_non_primary = sorted(
-        [row for row in ranking_rows if row["credited_hits"] > 0 and row["top_primary_days"] <= 1],
-        key=lambda row: (-int(row["credited_hits"]), float(row["median_hit_rank"] or 99.0), row["state_key"]),
-    )[:8]
+    if ranking_evaluation["evaluable"]:
+        false_positive_top = sorted(
+            [row for row in ranking_rows if row["top_primary_days"] > 0],
+            key=lambda row: (-int(row["top_primary_minus_high_conviction"]), -int(row["top_primary_days"]), int(row["credited_hits"])),
+        )[:8]
+        productive_non_primary = sorted(
+            [row for row in ranking_rows if row["credited_hits"] > 0 and row["top_primary_days"] <= 1],
+            key=lambda row: (-int(row["credited_hits"]), float(row["median_hit_rank"] or 99.0), row["state_key"]),
+        )[:8]
+    else:
+        false_positive_top = []
+        productive_non_primary = []
 
     event_subsets = {
         "play_box": _subset_rows(tracker_event_rows, lambda row: _truthy(row.get("play_card_any_box"))),
@@ -381,6 +423,7 @@ def build_payload(window_roots: Sequence[Path]) -> Dict[str, Any]:
         },
         "window_summaries": window_summaries,
         "brain2_ranking": {
+            **ranking_evaluation,
             "state_rows": ranking_rows,
             "repeated_false_positive_top_states": false_positive_top,
             "productive_non_primary_states": productive_non_primary,
@@ -392,7 +435,11 @@ def build_payload(window_roots: Sequence[Path]) -> Dict[str, Any]:
             "rows": doubles_rows,
         },
         "interpretation": [
-            "Use the ranking diagnostic to find states the board over-promotes versus states that keep converting without being primary.",
+            (
+                "Use the ranking diagnostic to find states the board over-promotes versus states that keep converting without being primary."
+                if ranking_evaluation["evaluable"]
+                else "Brain 2 cross-state ranking diagnostics are NOT_EVALUABLE because the historical board order is INVALID_STATIC_ORDER; preserve state-level hit facts without rank claims."
+            ),
             "Use the tracker-lift tables to separate sharp signals from ambient support before changing Brain 2 weights.",
             "Use the doubles subtype table to learn which double forms matter most before turning 'doubles matter' into a blunt scoring rule.",
         ],
@@ -426,20 +473,25 @@ def _render_markdown(payload: Dict[str, Any], *, ranking_csv: Path, tracker_csv:
     lines.append("")
     lines.append("## 2. Brain 2 Ranking Diagnostic")
     lines.append("")
-    lines.append("- Repeated false-positive top states:")
-    for row in ranking["repeated_false_positive_top_states"][:8]:
-        lines.append(
-            f"  - `{row['state_key']}` top_primary_days=`{row['top_primary_days']}` "
-            f"high_conviction_hits=`{row['high_conviction_hits']}` credited_hits=`{row['credited_hits']}` "
-            f"median_hit_rank=`{row['median_hit_rank']:.1f}`"
-        )
-    lines.append("- Productive non-primary states:")
-    for row in ranking["productive_non_primary_states"][:8]:
-        lines.append(
-            f"  - `{row['state_key']}` credited_hits=`{row['credited_hits']}` top_primary_days=`{row['top_primary_days']}` "
-            f"strict_box=`{row['strict_box_hits']}` straight=`{row['straight_hits']}` "
-            f"median_hit_rank=`{row['median_hit_rank']:.1f}`"
-        )
+    if not ranking.get("evaluable"):
+        lines.append("- Status: `NOT_EVALUABLE`")
+        lines.append(f"- Reason: `{ranking.get('reason') or RANK_INTEGRITY_INVALID_STATIC_ORDER}`")
+        lines.append("- State-level hit and tracker facts remain available; rank-derived over/under-promotion claims are suppressed.")
+    else:
+        lines.append("- Repeated false-positive top states:")
+        for row in ranking["repeated_false_positive_top_states"][:8]:
+            lines.append(
+                f"  - `{row['state_key']}` top_primary_days=`{row['top_primary_days']}` "
+                f"high_conviction_hits=`{row['high_conviction_hits']}` credited_hits=`{row['credited_hits']}` "
+                f"median_hit_rank=`{row['median_hit_rank']:.1f}`"
+            )
+        lines.append("- Productive non-primary states:")
+        for row in ranking["productive_non_primary_states"][:8]:
+            lines.append(
+                f"  - `{row['state_key']}` credited_hits=`{row['credited_hits']}` top_primary_days=`{row['top_primary_days']}` "
+                f"strict_box=`{row['strict_box_hits']}` straight=`{row['straight_hits']}` "
+                f"median_hit_rank=`{row['median_hit_rank']:.1f}`"
+            )
     lines.append("")
     lines.append("## 3. Tracker-Family Lift")
     lines.append("")

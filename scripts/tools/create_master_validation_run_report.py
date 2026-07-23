@@ -18,6 +18,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import sys
 from datetime import date as _date
 from datetime import timedelta
 from pathlib import Path
@@ -25,6 +26,14 @@ from typing import Any, Iterable, Mapping, Sequence
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.tools.brain2_rank_contract import (
+    display_order_contract_from_row,
+    rank_contract_from_row,
+)
+
 RUNS2_DIR = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"
 FINAL_DOCS_DIR = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "final docs"
 STATE_TEMPLATE_PATH = FINAL_DOCS_DIR / "AAT9_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md"
@@ -573,8 +582,13 @@ def _context_summary(
     if isinstance(brain2_context, Mapping):
         scoreboard_row = brain2_context.get("scoreboard_row") or {}
         if isinstance(scoreboard_row, Mapping):
+            rank_contract = rank_contract_from_row(scoreboard_row)
+            display_contract = display_order_contract_from_row(scoreboard_row)
             out["scoreboard"] = [
-                f"`rank={scoreboard_row.get('score_rank', '-')}`",
+                f"`display_order={display_contract.get('display_order') or '-'}`",
+                f"`legacy_rank={scoreboard_row.get('legacy_static_rank') or scoreboard_row.get('score_rank') or '-'}`",
+                f"`analytical_rank={rank_contract.get('analytical_rank') or '-'}`",
+                f"`rank_integrity={rank_contract.get('rank_integrity_status') or '-'}`",
                 f"`role={scoreboard_row.get('role', '-')}`",
                 f"`bucket={scoreboard_row.get('targeting_bucket', '-')}`",
                 f"`tracker={scoreboard_row.get('tracker_posture', '-')}`",

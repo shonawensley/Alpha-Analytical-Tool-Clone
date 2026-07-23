@@ -1092,8 +1092,9 @@ def test_window_decay_carryover_scorecard(tmp_path, monkeypatch) -> None:
     assert metric_lookup["arena_box_total"]["incremental_decay_lift"] == 1
 
     cohort_lookup = {row["cohort"]: row for row in payload["cohort_panels"]}
-    assert cohort_lookup["top_primary_target"]["same_day_resolved"] == 1
-    assert cohort_lookup["top_primary_target"]["horizon_resolved"] == 1
+    assert cohort_lookup["top_primary_target"]["status"] == "NOT_EVALUABLE"
+    assert cohort_lookup["top_primary_target"]["same_day_resolved"] is None
+    assert cohort_lookup["top_primary_target"]["horizon_resolved"] is None
 
     rows_by_state = {row["state_key"]: row for row in payload["rows"]}
     assert rows_by_state["NewYork4"]["arena_box_total_profile"] == "direct_same_outcome"
@@ -1411,7 +1412,8 @@ def test_tuneup_diagnostics_report(tmp_path, monkeypatch) -> None:
     tuneup.main()
 
     payload = json.loads(out_json.read_text(encoding="utf-8"))
-    assert payload["brain2_ranking"]["repeated_false_positive_top_states"][0]["state_key"] == "NewYork4"
+    assert payload["brain2_ranking"]["status"] == "NOT_EVALUABLE"
+    assert payload["brain2_ranking"]["repeated_false_positive_top_states"] == []
     assert payload["tracker_lift"]["rows"]
     assert payload["doubles_subtype"]["rows"]
     assert "Brain 2 Ranking Diagnostic" in out_md.read_text(encoding="utf-8")

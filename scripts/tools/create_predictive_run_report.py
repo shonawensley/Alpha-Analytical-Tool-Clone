@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from datetime import date as _date
 from datetime import timedelta
 from pathlib import Path
@@ -25,6 +26,14 @@ from typing import Any, Iterable, Mapping, Sequence
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from scripts.tools.brain2_rank_contract import (
+    display_order_contract_from_row,
+    rank_contract_from_row,
+)
+
 RUNS2_PREDICTIVE_DIR = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2" / "PREDICTIVE"
 FINAL_DOCS_DIR = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "final docs"
 SYSTEM_MAP_PATH = FINAL_DOCS_DIR / "AAT9_ANALYSIS_ARENA_BRANCH__SYSTEM_MAP.md"
@@ -111,7 +120,21 @@ def _fmt_items(values: Sequence[str], *, empty: str = "_none_") -> str:
 
 def _fmt_path(path: Path) -> str:
     suffix = "" if path.exists() else " (missing)"
-    return f"`{safe_rel(path)}`{suffix}"
+    return f"[`{safe_rel(path)}`]({path.resolve()}){suffix}"
+
+
+def _fmt_paths(paths: Sequence[Path], *, empty: str = "_none_") -> str:
+    ordered = []
+    seen: set[str] = set()
+    for path in paths:
+        key = str(path.resolve())
+        if key in seen:
+            continue
+        seen.add(key)
+        ordered.append(_fmt_path(path))
+    if not ordered:
+        return empty
+    return ", ".join(ordered)
 
 
 def _ranked_values(items: Any, *, value_key: str = "value", limit: int = 6) -> list[str]:
@@ -409,7 +432,7 @@ def build_predictive_run_report(
     lines.append(f"- Stable report HTML: {_fmt_path(state_dir / 'stable' / state / f'{state}_stable_patterns_report.html')}")
     lines.append(f"- Digit Reduction scores CSV: {_fmt_path(state_dir / 'digit_reduction' / state / f'{state}_digit_reduction_scores.csv')}")
     lines.append(f"- Digit Reduction report HTML: {_fmt_path(state_dir / 'digit_reduction' / state / f'{state}_digit_reduction_report.html')}")
-    lines.append(f"- VTRAC enhanced JSON: {_fmt_items([safe_rel(path) for path in sorted((state_dir / 'vtrac' / state).glob(f'{state}_vtrac_enhanced_*.json'))], empty='_(none found)_')}")
+    lines.append(f"- VTRAC enhanced JSON: {_fmt_paths(sorted((state_dir / 'vtrac' / state).glob(f'{state}_vtrac_enhanced_*.json')), empty='_(none found)_')}")
     lines.append(f"- Hot Zones top lanes CSV: {_fmt_path(state_dir / 'hot_zones' / state / f'{state}_hot_zones_top_lanes.csv')}")
     lines.append("")
     lines.append("## Brain 1 — Aggregated Analysis Arena Snapshot")
@@ -426,8 +449,13 @@ def build_predictive_run_report(
     lines.append("")
     lines.append("## Brain 2 Carry-Through / Translation Sandbox")
     lines.append("")
+    rank_contract = rank_contract_from_row(scoreboard_row)
+    display_contract = display_order_contract_from_row(scoreboard_row)
     scoreboard_summary = [
-        f"rank={scoreboard_row.get('score_rank', '-')}",
+        f"display_order={display_contract.get('display_order') or '-'}",
+        f"legacy_rank={scoreboard_row.get('legacy_static_rank') or scoreboard_row.get('score_rank') or '-'}",
+        f"analytical_rank={rank_contract.get('analytical_rank') or '-'}",
+        f"rank_integrity={rank_contract.get('rank_integrity_status') or '-'}",
         f"role={scoreboard_row.get('role', '-')}",
         f"bucket={scoreboard_row.get('targeting_bucket', '-')}",
         f"tracker={scoreboard_row.get('tracker_posture', '-')}",

@@ -20,6 +20,15 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from scripts.tools.brain2_rank_contract import (
+    DISPLAY_ORDER_SOURCE_INPUT_ROSTER,
+    RANK_INTEGRITY_INVALID_STATIC_ORDER,
+    input_order_key,
+    legacy_rank_fields,
+    rank_evaluation_status,
+    unavailable_rank_contract,
+)
+
 
 def _read_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8", errors="replace"))
@@ -237,17 +246,16 @@ def build_board_scoreboard_payload(overlay: Dict[str, Any]) -> Dict[str, Any]:
 
     scoreboard_rows = board_summary.get("board_scoreboard") if isinstance(board_summary.get("board_scoreboard"), list) else []
     compact_rows: List[Dict[str, Any]] = []
-    for score_rank, row in enumerate(scoreboard_rows, start=1):
+    for legacy_list_rank, row in enumerate(scoreboard_rows, start=1):
         if not isinstance(row, dict):
             continue
         state_key = str(row.get("state_key") or "")
         summary = summary_by_state.get(state_key, {})
-        compact_rows.append(
-            {
-                "score_rank": score_rank,
+        input_order = _to_int(row.get("input_order") or row.get("input_rank"), legacy_list_rank)
+        legacy_static_rank = _to_int(row.get("legacy_static_rank") or row.get("score_rank"), legacy_list_rank)
+        legacy_priority_score = _to_int(row.get("legacy_priority_score") or row.get("priority_score"), 0)
+        compact_row = {
                 "state_key": state_key,
-                "input_rank": _to_int(row.get("input_rank"), 0),
-                "priority_score": _to_int(row.get("priority_score"), 0),
                 "role": str(row.get("role") or ""),
                 "spent_status": str(row.get("spent_status") or ""),
                 "evening_bias": str(row.get("evening_bias") or ""),
@@ -267,33 +275,42 @@ def build_board_scoreboard_payload(overlay: Dict[str, Any]) -> Dict[str, Any]:
                 "primary_overlap_hits": _to_int(row.get("primary_overlap_hits"), 0),
                 "direct_cross_hits": _to_int(row.get("direct_cross_hits"), 0),
             }
+        compact_row.update(
+            legacy_rank_fields(
+                input_order=input_order,
+                legacy_static_rank=legacy_static_rank,
+                legacy_priority_score=legacy_priority_score,
+            )
         )
+        compact_rows.append(compact_row)
+
+    compact_rows.sort(key=input_order_key)
 
     duplicate_pairs = board_summary.get("likely_duplicated_pairs") if isinstance(board_summary.get("likely_duplicated_pairs"), list) else []
     strongest_pairs = board_summary.get("strongest_overlap_pairs") if isinstance(board_summary.get("strongest_overlap_pairs"), list) else []
     direct_cross_rows = [
         row for row in relationships if isinstance(row, dict) and str(row.get("directness") or "") == "direct-cross-state"
     ]
-    primary_targets = [row["state_key"] for row in compact_rows if row.get("targeting_bucket") == "tight_core"][:3]
-    shoulder_states = [row["state_key"] for row in compact_rows if row.get("targeting_bucket") == "small_shoulder"][:3]
-    watch_states = [row["state_key"] for row in compact_rows if row.get("targeting_bucket") in {"watch_only", "echo_only"}][:4]
-    highest_priority_state = compact_rows[0]["state_key"] if compact_rows else None
-    secondary_priority_state = compact_rows[1]["state_key"] if len(compact_rows) > 1 else None
-    best_clean_host = primary_targets[0] if primary_targets else (shoulder_states[0] if shoulder_states else None)
-    best_relationship_source = watch_states[0] if watch_states else None
+    primary_targets = sorted(row["state_key"] for row in compact_rows if row.get("targeting_bucket") == "tight_core")
+    shoulder_states = sorted(row["state_key"] for row in compact_rows if row.get("targeting_bucket") == "small_shoulder")
+    watch_states = sorted(
+        row["state_key"] for row in compact_rows if row.get("targeting_bucket") in {"watch_only", "echo_only"}
+    )
     context_rich_rows = sorted(
         compact_rows,
-        key=lambda row: (-_context_signal_score(row), -_to_int(row.get("priority_score"), 0), str(row.get("state_key") or "")),
+        key=lambda row: (-_context_signal_score(row), str(row.get("state_key") or "")),
     )
     highest_context_support_state = (
         context_rich_rows[0]["state_key"] if context_rich_rows and _context_signal_score(context_rich_rows[0]) > 0 else None
     )
 
     board_verdict = {
-        "top_primary_target": highest_priority_state,
-        "secondary_target": secondary_priority_state,
-        "best_clean_host": best_clean_host,
-        "best_relationship_source": best_relationship_source,
+        "rank_evaluation": rank_evaluation_status(compact_rows),
+        "top_primary_target": None,
+        "secondary_target": None,
+        "best_clean_host": None,
+        "best_relationship_source": None,
+        "rank_unavailable_reason": RANK_INTEGRITY_INVALID_STATIC_ORDER,
         "highest_context_support_state": highest_context_support_state,
         "tight_core_states": primary_targets,
         "small_shoulder_states": shoulder_states,
@@ -303,13 +320,19 @@ def build_board_scoreboard_payload(overlay: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     return {
-        "schema_version": "board_scoreboard_v0",
+        "schema_version": "board_scoreboard_v1",
         "metadata": {
             "generated_from_overlay": metadata.get("board_name"),
             "results_date": metadata.get("results_date"),
             "profile": metadata.get("profile"),
             "experiment_tag": metadata.get("experiment_tag"),
             "overlay_results_path": metadata.get("midday_results_path"),
+            "rank_integrity_status": RANK_INTEGRITY_INVALID_STATIC_ORDER,
+        },
+        "rank_contract": unavailable_rank_contract(),
+        "display_order_contract": {
+            "display_order_source": DISPLAY_ORDER_SOURCE_INPUT_ROSTER,
+            "display_order_is_analytical": False,
         },
         "scoreboard_rows": compact_rows,
         "duplicate_pairs": duplicate_pairs[:10],
@@ -330,15 +353,18 @@ def build_board_scoreboard_markdown(payload: Dict[str, Any]) -> str:
     lines.append("")
     lines.append("Purpose: condense the spillover overlay into a compact Brain 2 targeting table and handoff view.")
     lines.append("")
-    lines.append("## Scoreboard")
+    lines.append("**RANK INTEGRITY STATUS: `INVALID_STATIC_ORDER`.** Analytical rank is unavailable. Legacy rank and priority are retained only as deprecated diagnostic receipts.")
+    lines.append("**DISPLAY ORDER:** `INPUT_ROSTER_NON_ANALYTICAL`; navigation only, with no analytical meaning.")
     lines.append("")
-    lines.append("| Score Rank | State | Priority | Role | Targeting | Spent | Bias | Tracker | BA | BA Recos | Survivor | R-Consensus | Profit Hint | Compound | Positional | Due-Doubles | Top Canonicals | Top VTRAC |")
-    lines.append("|---:|---|---:|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
+    lines.append("## Board Evidence Rows")
+    lines.append("")
+    lines.append("| Input Order | Legacy Rank | Analytical Rank | State | Legacy Priority | Role | Targeting | Spent | Bias | Tracker | BA | BA Recos | Survivor | R-Consensus | Profit Hint | Compound | Positional | Due-Doubles | Top Canonicals | Top VTRAC |")
+    lines.append("|---:|---:|---:|---|---:|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|")
     for row in rows:
         if not isinstance(row, dict):
             continue
         lines.append(
-            f"| {row.get('score_rank')} | {row.get('state_key')} | {row.get('priority_score')} | {row.get('role')} | {row.get('targeting_bucket')} | {row.get('spent_status')} | {row.get('evening_bias')} | {row.get('tracker_posture')} | {row.get('best_blackapple')} | {row.get('blackapple_reco_hint')} | {row.get('survivor_hint')} | {row.get('r_consensus_hint')} | {row.get('profit_alert_hint')} | {row.get('compound_event_hint')} | {row.get('positional_hint')} | {row.get('due_double_hint')} | {', '.join(row.get('top_canonicals') or []) or '-'} | {', '.join(row.get('top_vtrac_indices') or []) or '-'} |"
+            f"| {row.get('input_order')} | {row.get('legacy_static_rank')} | {row.get('analytical_rank') or '-'} | {row.get('state_key')} | {row.get('legacy_priority_score')} | {row.get('role')} | {row.get('targeting_bucket')} | {row.get('spent_status')} | {row.get('evening_bias')} | {row.get('tracker_posture')} | {row.get('best_blackapple')} | {row.get('blackapple_reco_hint')} | {row.get('survivor_hint')} | {row.get('r_consensus_hint')} | {row.get('profit_alert_hint')} | {row.get('compound_event_hint')} | {row.get('positional_hint')} | {row.get('due_double_hint')} | {', '.join(row.get('top_canonicals') or []) or '-'} | {', '.join(row.get('top_vtrac_indices') or []) or '-'} |"
         )
 
     if duplicate_pairs:
@@ -366,6 +392,8 @@ def build_board_scoreboard_markdown(payload: Dict[str, Any]) -> str:
     lines.append("")
     lines.append("## Board Verdict")
     lines.append("")
+    lines.append(f"- rank_evaluation: `{(board_verdict.get('rank_evaluation') or {}).get('status') or '-'}`")
+    lines.append(f"- rank_unavailable_reason: `{board_verdict.get('rank_unavailable_reason') or '-'}`")
     lines.append(f"- top_primary_target: `{board_verdict.get('top_primary_target') or '-'}`")
     lines.append(f"- secondary_target: `{board_verdict.get('secondary_target') or '-'}`")
     lines.append(f"- best_clean_host: `{board_verdict.get('best_clean_host') or '-'}`")
@@ -380,6 +408,22 @@ def build_board_scoreboard_markdown(payload: Dict[str, Any]) -> str:
 def _write_csv(path: Path, rows: List[Dict[str, Any]]) -> Path:
     path.parent.mkdir(parents=True, exist_ok=True)
     fieldnames = [
+        "display_order",
+        "display_order_source",
+        "display_order_is_analytical",
+        "input_order",
+        "legacy_static_rank",
+        "legacy_priority_score",
+        "legacy_rank_source",
+        "analytical_rank",
+        "analytical_score",
+        "analytical_rank_source",
+        "rank_integrity_status",
+        "rank_signal_available",
+        "rank_signal_valid",
+        "rank_contribution",
+        "rank_contribution_mode",
+        "rank_exclusion_reason",
         "score_rank",
         "state_key",
         "input_rank",

@@ -16,6 +16,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.tools.analysis_arena_window_utils import read_json, safe_rel
+from scripts.tools.brain2_rank_contract import RANK_INTEGRITY_INVALID_STATIC_ORDER
 
 
 DEFAULT_RUNS2_ROOT = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2"
@@ -125,6 +126,7 @@ def _window_row(window_root: Path) -> Dict[str, Any]:
     translator_summary = translator.get("summary") or {}
     winner_events = int(summary_counts.get("winner_events", 0) or 0)
     frontier_total = sum(int(v) for v in signature_mix.values()) or 0
+    rank_evaluable = bool(ranking.get("evaluable"))
 
     def pct_count_rate(block: Dict[str, Any]) -> float:
         if not isinstance(block, dict):
@@ -147,9 +149,19 @@ def _window_row(window_root: Path) -> Dict[str, Any]:
         "play_card_any_box_rate": _rate_value(summary_rates.get("play_card_any_box", 0.0)),
         "candidate_universe_box_rate": _rate_value(summary_rates.get("cu_box", 0.0)),
         "candidate_universe_exact_rate": _rate_value(summary_rates.get("cu_exact", 0.0)),
-        "top_primary_target_rate": _rate_value(summary_rates.get("top_primary_target", 0.0)),
-        "median_rank_all_hits": float(ranking.get("median_rank_all_hits", 0.0) or 0.0),
-        "median_rank_high_conviction": float(ranking.get("median_rank_high_conviction", 0.0) or 0.0),
+        "rank_evaluation_status": "EVALUABLE" if rank_evaluable else "NOT_EVALUABLE",
+        "rank_evaluation_reason": None if rank_evaluable else RANK_INTEGRITY_INVALID_STATIC_ORDER,
+        "top_primary_target_rate": (
+            _rate_value(summary_rates.get("top_primary_target")) if rank_evaluable else None
+        ),
+        "median_rank_all_hits": (
+            float(ranking.get("median_rank_all_hits", 0.0) or 0.0) if rank_evaluable else None
+        ),
+        "median_rank_high_conviction": (
+            float(ranking.get("median_rank_high_conviction", 0.0) or 0.0)
+            if rank_evaluable
+            else None
+        ),
         "strict_box_hits": int(hit_inventory.get("strict_box_hits", 0) or 0),
         "straight_hits": int(hit_inventory.get("straight_hits", 0) or 0),
         "vtrac_only_hits": int(hit_inventory.get("vtrac_only_hits", 0) or 0),
@@ -174,6 +186,12 @@ def build_payload(window_roots: List[Path]) -> Dict[str, Any]:
     def avg(key: str) -> float:
         return sum(float(row[key]) for row in rows) / windows if windows else 0.0
 
+    def avg_evaluable(key: str) -> float | None:
+        values = [float(row[key]) for row in rows if row.get(key) is not None]
+        return sum(values) / len(values) if values else None
+
+    rank_evaluable_windows = sum(1 for row in rows if row.get("rank_evaluation_status") == "EVALUABLE")
+
     summary = {
         "window_count": windows,
         "winner_events": total_events,
@@ -181,7 +199,10 @@ def build_payload(window_roots: List[Path]) -> Dict[str, Any]:
         "average_candidate_like_event_rate": avg("candidate_like_event_rate"),
         "average_finalist_supported_hit_rate": avg("finalist_supported_hit_rate"),
         "average_play_card_any_box_rate": avg("play_card_any_box_rate"),
-        "average_top_primary_target_rate": avg("top_primary_target_rate"),
+        "rank_evaluation_status": "EVALUABLE" if rank_evaluable_windows else "NOT_EVALUABLE",
+        "rank_evaluation_reason": None if rank_evaluable_windows else RANK_INTEGRITY_INVALID_STATIC_ORDER,
+        "rank_evaluable_windows": rank_evaluable_windows,
+        "average_top_primary_target_rate": avg_evaluable("top_primary_target_rate"),
         "average_opportunity_gap_box_rate": avg("opportunity_gap_box_rate"),
         "average_translator_box_gap_rows": avg("translator_box_gap_rows"),
     }
@@ -231,7 +252,10 @@ def _render_markdown(payload: Dict[str, Any], *, csv_path: Path) -> str:
     lines.append(f"- Candidate-like event coverage: `{_pct(float(summary.get('average_candidate_like_event_rate', 0.0)))}`")
     lines.append(f"- Finalist-supported hit rate: `{_pct(float(summary.get('average_finalist_supported_hit_rate', 0.0)))}`")
     lines.append(f"- Play Card any-box rate: `{_pct(float(summary.get('average_play_card_any_box_rate', 0.0)))}`")
-    lines.append(f"- Top-primary-target rate: `{_pct(float(summary.get('average_top_primary_target_rate', 0.0)))}`")
+    if summary.get("average_top_primary_target_rate") is None:
+        lines.append("- Top-primary-target rate: `NOT_EVALUABLE` (`INVALID_STATIC_ORDER`).")
+    else:
+        lines.append(f"- Top-primary-target rate: `{_pct(float(summary['average_top_primary_target_rate']))}`")
     lines.append(f"- Opportunity-gap box rate: `{_pct(float(summary.get('average_opportunity_gap_box_rate', 0.0)))}`")
     lines.append("")
     lines.append("## 3. Window Table")
@@ -248,7 +272,11 @@ def _render_markdown(payload: Dict[str, Any], *, csv_path: Path) -> str:
                     _pct(float(row.get("candidate_like_event_rate", 0.0))),
                     _pct(float(row.get("finalist_supported_hit_rate", 0.0))),
                     _pct(float(row.get("play_card_any_box_rate", 0.0))),
-                    _pct(float(row.get("top_primary_target_rate", 0.0))),
+                    (
+                        _pct(float(row["top_primary_target_rate"]))
+                        if row.get("top_primary_target_rate") is not None
+                        else "NOT_EVALUABLE"
+                    ),
                     _pct(float(row.get("opportunity_gap_box_rate", 0.0))),
                     str(row.get("translator_box_gap_rows", 0)),
                     row.get("frontier_top_signature", ""),

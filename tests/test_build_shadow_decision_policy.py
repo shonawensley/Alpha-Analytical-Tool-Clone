@@ -186,23 +186,25 @@ def test_build_shadow_decision_policy_payload_and_files(tmp_path: Path) -> None:
         scoreboard_payload=_scoreboard_fixture(),
     )
 
-    assert payload["schema_version"] == "shadow_decision_policy_v0"
-    assert payload["shadow_verdict"]["top_play_state"] == "NewJersey4"
-    assert payload["shadow_verdict"]["top_watch_state"] == "Virginia4"
+    assert payload["schema_version"] == "shadow_decision_policy_v1"
+    assert payload["shadow_verdict"]["top_play_state"] is None
+    assert payload["shadow_verdict"]["top_watch_state"] is None
+    assert payload["shadow_verdict"]["unresolved_states"] == ["NewJersey4", "Virginia4"]
 
     decisions = {row["state_key"]: row for row in payload["state_decisions"]}
-    assert decisions["NewJersey4"]["posture"] == "PLAY"
+    assert decisions["NewJersey4"]["posture"] == "UNRESOLVED"
     assert decisions["NewJersey4"]["mode"] in {"boxed", "vt_box"}
-    assert decisions["NewJersey4"]["translator_route"] in {"boxed", "vt_box"}
-    assert "PLAY_STATE" in decisions["NewJersey4"]["reason_codes"]
+    assert decisions["NewJersey4"]["translator_route"] == "none"
+    assert decisions["NewJersey4"]["cap_class"] == "unavailable"
+    assert "UNRESOLVED_STATE" in decisions["NewJersey4"]["reason_codes"]
     assert "LAST_REMAINING" in decisions["NewJersey4"]["reason_codes"]
     assert "HIDDEN_TERMINAL_SUPPORT" in decisions["NewJersey4"]["reason_codes"]
     assert "R_CONSENSUS_PRESENT" in decisions["NewJersey4"]["reason_codes"]
-    assert decisions["Virginia4"]["posture"] == "WATCH"
+    assert decisions["Virginia4"]["posture"] == "UNRESOLVED"
     assert "CONSENSUS_EVENT" in decisions["Virginia4"]["reason_codes"]
     assert "R_CONSENSUS_TRIAL_ELIGIBLE" in decisions["Virginia4"]["reason_codes"]
     assert "SURVIVOR_PROGRESSION" in decisions["Virginia4"]["reason_codes"]
-    assert "WATCH_RELATIONSHIP" in decisions["Virginia4"]["blockers"]
+    assert "RANK_SIGNAL_UNAVAILABLE" in decisions["Virginia4"]["blockers"]
 
     md = build_shadow_decision_policy_markdown(payload)
     assert "Shadow Decision Policy" in md
@@ -215,4 +217,4 @@ def test_build_shadow_decision_policy_payload_and_files(tmp_path: Path) -> None:
     assert json_path is not None and json_path.exists()
 
     reloaded = json.loads(json_path.read_text(encoding="utf-8"))
-    assert reloaded["shadow_verdict"]["top_play_state"] == "NewJersey4"
+    assert reloaded["shadow_verdict"]["top_play_state"] is None

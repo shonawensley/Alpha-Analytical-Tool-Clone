@@ -260,16 +260,18 @@ def test_build_board_review_bundle_payload_and_files(tmp_path: Path) -> None:
         decision_policy_json_path=decision_json_path,
     )
 
-    assert bundle_payload["schema_version"] == "board_review_bundle_v0"
-    assert bundle_payload["board_verdict"]["top_primary_target"]
+    assert bundle_payload["schema_version"] == "board_review_bundle_v1"
+    assert bundle_payload["board_verdict"]["top_primary_target"] is None
     assert bundle_payload["artifacts"]["overlay_json"].endswith("overlay.json")
     assert bundle_payload["artifacts"]["shadow_decision_policy_md"].endswith("shadow_dpl.md")
     assert bundle_payload["workflow_manifest"]["brain2_runtime_entrypoint"].endswith("create_board_review_bundle.py")
     assert bundle_payload["workflow_manifest"]["shadow_decision_policy_builder"].endswith("build_shadow_decision_policy.py")
-    assert bundle_payload["shadow_decision_policy"]["top_play_state"] or bundle_payload["shadow_decision_policy"]["top_watch_state"]
+    assert bundle_payload["shadow_decision_policy"]["top_play_state"] is None
+    assert bundle_payload["shadow_decision_policy"]["unresolved_states"]
 
     md = build_board_review_bundle_markdown(bundle_payload)
     assert "Board Review Bundle" in md
+    assert "INVALID_STATIC_ORDER" in md
     assert "Board Verdict" in md
     assert "Shadow Decision Policy" in md
     assert "Workflow" in md

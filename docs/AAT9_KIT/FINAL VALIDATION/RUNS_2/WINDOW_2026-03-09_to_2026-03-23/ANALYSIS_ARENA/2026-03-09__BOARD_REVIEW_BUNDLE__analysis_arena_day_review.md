@@ -2,6 +2,10 @@
 
 Purpose: one-step Brain 2 board review bundle linking the runtime overlay and compact scoreboard.
 
+**RANK INTEGRITY STATUS: `INVALID_STATIC_ORDER`.** Analytical rank and rank-derived top-state decisions are unavailable; structural evidence remains reviewable.
+
+**DISPLAY ORDER:** `INPUT_ROSTER_NON_ANALYTICAL`; navigation only, with no analytical meaning.
+
 ## Artifacts
 
 - overlay_json: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/ANALYSIS_ARENA/2026-03-09__BOARD_SPILLOVER_OVERLAY__analysis_arena_day_review.json`
@@ -23,32 +27,35 @@ Purpose: one-step Brain 2 board review bundle linking the runtime overlay and co
 
 ## Board Verdict
 
-- top_primary_target: `Connecticut4`
-- secondary_target: `Delaware4`
-- best_clean_host: `Connecticut4`
+- rank_evaluation: `NOT_EVALUABLE`
+- rank_unavailable_reason: `INVALID_STATIC_ORDER`
+- top_primary_target: `-`
+- secondary_target: `-`
+- best_clean_host: `-`
 - best_relationship_source: `-`
 - highest_context_support_state: `NorthCarolina4`
 - tight_core_states: `-`
-- small_shoulder_states: `Connecticut4, Delaware4, Florida4`
+- small_shoulder_states: `Connecticut4, Delaware4, Florida4, Indiana4, Michigan4, NewJersey4, NewYork4, NorthCarolina4, Ohio4, OntarioCanada4, Pennsylvania4, PuertoRico4, SouthCarolina4, Virginia4`
 - watch_only_states: `-`
 
 ## Shadow Decision Policy
 
 - top_play_state: `-`
-- top_watch_state: `Connecticut4`
+- top_watch_state: `-`
 - play_states: `-`
-- watch_states: `Connecticut4, Delaware4, Florida4, Indiana4, Michigan4, NewJersey4, NewYork4, NorthCarolina4, Ohio4, OntarioCanada4, Pennsylvania4, PuertoRico4, SouthCarolina4, Virginia4`
+- watch_states: `-`
 - skip_states: `-`
+- unresolved_states: `Connecticut4, Delaware4, Florida4, Indiana4, Michigan4, NewJersey4, NewYork4, NorthCarolina4, Ohio4, OntarioCanada4, Pennsylvania4, PuertoRico4, SouthCarolina4, Virginia4`
 
-## Top Scoreboard Rows
+## Board Evidence Rows
 
-| Rank | State | Priority | Role | Targeting |
-|---:|---|---:|---|---|
-| 1 | Connecticut4 | 128 | shared_host | small_shoulder |
-| 2 | Delaware4 | 118 | shared_host | small_shoulder |
-| 3 | Florida4 | 108 | shared_host | small_shoulder |
-| 4 | Indiana4 | 98 | shared_host | small_shoulder |
-| 5 | Michigan4 | 88 | shared_host | small_shoulder |
+| Input Order | Legacy Rank | Analytical Rank | State | Legacy Priority | Role | Targeting |
+|---:|---:|---:|---|---:|---|---|
+| 1 | 1 | - | Connecticut4 | 128 | shared_host | small_shoulder |
+| 2 | 2 | - | Delaware4 | 118 | shared_host | small_shoulder |
+| 3 | 3 | - | Florida4 | 108 | shared_host | small_shoulder |
+| 4 | 4 | - | Indiana4 | 98 | shared_host | small_shoulder |
+| 5 | 5 | - | Michigan4 | 88 | shared_host | small_shoulder |
 
 ## Duplicate Pairs
 
@@ -58,12 +65,12 @@ Purpose: one-step Brain 2 board review bundle linking the runtime overlay and co
 - `NewJersey4 ↔ SouthCarolina4` score=`33` types=`alert_implied_echo, shared_box_family, shared_lane`
 - `PuertoRico4 ↔ Virginia4` score=`32` types=`alert_implied_echo, shared_box_family, shared_lane`
 
-## Top Shadow Decisions
+## Shadow Decision Receipts
 
-| Rank | State | Posture | Mode | Cap | Route |
-|---:|---|---|---|---|---|
-| 1 | Connecticut4 | WATCH | boxed | low | none |
-| 2 | Delaware4 | WATCH | boxed | low | none |
-| 3 | Florida4 | WATCH | boxed | low | none |
-| 4 | Indiana4 | WATCH | boxed | low | none |
-| 5 | Michigan4 | WATCH | boxed | low | none |
+| Input Order | Legacy Rank | Analytical Rank | State | Posture | Mode | Cap | Route |
+|---:|---:|---:|---|---|---|---|---|
+| 1 | 1 | - | Connecticut4 | UNRESOLVED | boxed | unavailable | none |
+| 2 | 2 | - | Delaware4 | UNRESOLVED | boxed | unavailable | none |
+| 3 | 3 | - | Florida4 | UNRESOLVED | boxed | unavailable | none |
+| 4 | 4 | - | Indiana4 | UNRESOLVED | boxed | unavailable | none |
+| 5 | 5 | - | Michigan4 | UNRESOLVED | boxed | unavailable | none |

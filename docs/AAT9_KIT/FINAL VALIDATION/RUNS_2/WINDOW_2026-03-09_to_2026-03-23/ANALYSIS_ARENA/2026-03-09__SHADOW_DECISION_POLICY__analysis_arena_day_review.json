@@ -3,20 +3,38 @@
     "overlay_board_name": "analysis_arena_day_review",
     "scoreboard_source": "analysis_arena_day_review"
   },
+  "display_order_contract": {
+    "display_order_is_analytical": false,
+    "display_order_source": "INPUT_ROSTER_NON_ANALYTICAL"
+  },
   "metadata": {
     "board_name": "analysis_arena_day_review",
     "experiment_tag": "arena_v0",
     "mode": "shadow",
     "profile": "tool_only",
+    "rank_integrity_status": "INVALID_STATIC_ORDER",
     "results_date": "2026-03-09"
   },
-  "schema_version": "shadow_decision_policy_v0",
+  "rank_contract": {
+    "analytical_rank": null,
+    "analytical_rank_source": null,
+    "analytical_score": null,
+    "rank_contribution": 0.0,
+    "rank_contribution_mode": "neutral_ignored",
+    "rank_exclusion_reason": "INVALID_STATIC_ORDER",
+    "rank_integrity_status": "INVALID_STATIC_ORDER",
+    "rank_signal_available": false,
+    "rank_signal_valid": false,
+    "schema_version": "brain2_rank_contract_v1"
+  },
+  "schema_version": "shadow_decision_policy_v1",
   "shadow_verdict": {
     "play_states": [],
+    "rank_dependent_decisions_available": false,
     "skip_states": [],
     "top_play_state": null,
-    "top_watch_state": "Connecticut4",
-    "watch_states": [
+    "top_watch_state": null,
+    "unresolved_states": [
       "Connecticut4",
       "Delaware4",
       "Florida4",
@@ -31,14 +49,17 @@
       "PuertoRico4",
       "SouthCarolina4",
       "Virginia4"
-    ]
+    ],
+    "watch_states": []
   },
   "state_decisions": [
     {
+      "analytical_rank": null,
+      "analytical_score": null,
       "blockers": [
-        "SHOULDER_STATE"
+        "RANK_SIGNAL_UNAVAILABLE"
       ],
-      "board_priority": "tier1",
+      "board_priority": "unavailable",
       "candidate_focus": {
         "primary_cluster": {
           "canonicals": [
@@ -105,9 +126,14 @@
           ]
         }
       },
-      "cap_class": "low",
-      "carryover_action": "continue",
+      "cap_class": "unavailable",
+      "carryover_action": "unresolved",
+      "display_order": 1,
+      "display_order_is_analytical": false,
+      "display_order_source": "INPUT_ROSTER_NON_ANALYTICAL",
       "environment": {
+        "analytical_rank": null,
+        "analytical_score": null,
         "blackapple_hint": "Combined:ALERT/3",
         "compound_event_hint": "-",
         "consensus_strength_class": "none",
@@ -122,13 +148,14 @@
         "hidden_terminal_support": true,
         "last_remaining": false,
         "last_remaining_rows": 0,
+        "legacy_priority_score": 128,
         "overlap_score": 226,
         "positional_hint": "P1 digit 6 aligns across Combined, Evening, Midday (XVAR-Cons(CEM))",
         "primary_overlap_hits": 29,
-        "priority_score": 128,
         "profit_alert_hint": "A04:168:PERSIST,BA",
         "r_consensus_cross_variant_tail_count": 0,
         "r_consensus_event_count": 0,
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
         "role": "shared_host",
         "spent_status": "unknown",
         "survivor_frontier_count": 27,
@@ -142,8 +169,23 @@
         "tracker_posture": "tracker-rich",
         "vtrac_alignment": "aligned"
       },
+      "input_order": 1,
+      "legacy_priority_score": 128,
+      "legacy_static_rank": 1,
       "mode": "boxed",
-      "posture": "WATCH",
+      "posture": "UNRESOLVED",
+      "rank_contract": {
+        "analytical_rank": null,
+        "analytical_rank_source": null,
+        "analytical_score": null,
+        "rank_contribution": 0.0,
+        "rank_contribution_mode": "neutral_ignored",
+        "rank_exclusion_reason": "INVALID_STATIC_ORDER",
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
+        "rank_signal_available": false,
+        "rank_signal_valid": false,
+        "schema_version": "brain2_rank_contract_v1"
+      },
       "reason_codes": [
         "HOST_STATE",
         "DOUBLE_HEAVY",
@@ -158,17 +200,20 @@
         "DUE_DOUBLE_ACTIVE",
         "POSITIONAL_SIGNAL",
         "MODE_BOXED",
-        "WATCH_STATE"
+        "RANK_SIGNAL_UNAVAILABLE",
+        "UNRESOLVED_STATE"
       ],
       "score_rank": 1,
       "state_key": "Connecticut4",
       "translator_route": "none"
     },
     {
+      "analytical_rank": null,
+      "analytical_score": null,
       "blockers": [
-        "SHOULDER_STATE"
+        "RANK_SIGNAL_UNAVAILABLE"
       ],
-      "board_priority": "tier1",
+      "board_priority": "unavailable",
       "candidate_focus": {
         "primary_cluster": {
           "canonicals": [
@@ -249,9 +294,14 @@
           ]
         }
       },
-      "cap_class": "low",
-      "carryover_action": "continue",
+      "cap_class": "unavailable",
+      "carryover_action": "unresolved",
+      "display_order": 2,
+      "display_order_is_analytical": false,
+      "display_order_source": "INPUT_ROSTER_NON_ANALYTICAL",
       "environment": {
+        "analytical_rank": null,
+        "analytical_score": null,
         "blackapple_hint": "Combined:OFF/0",
         "compound_event_hint": "Combined:STRAIGHT_GATE:P80",
         "consensus_strength_class": "strong",
@@ -266,13 +316,14 @@
         "hidden_terminal_support": true,
         "last_remaining": true,
         "last_remaining_rows": 2,
+        "legacy_priority_score": 118,
         "overlap_score": 235,
         "positional_hint": "P1 digit 2 aligns across Combined, Midday (XVAR-Cons(CM))",
         "primary_overlap_hits": 31,
-        "priority_score": 118,
         "profit_alert_hint": "A11:006:HOT,CONS",
         "r_consensus_cross_variant_tail_count": 0,
         "r_consensus_event_count": 3,
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
         "role": "shared_host",
         "spent_status": "unknown",
         "survivor_frontier_count": 27,
@@ -286,8 +337,23 @@
         "tracker_posture": "tracker-strong",
         "vtrac_alignment": "aligned"
       },
+      "input_order": 2,
+      "legacy_priority_score": 118,
+      "legacy_static_rank": 2,
       "mode": "boxed",
-      "posture": "WATCH",
+      "posture": "UNRESOLVED",
+      "rank_contract": {
+        "analytical_rank": null,
+        "analytical_rank_source": null,
+        "analytical_score": null,
+        "rank_contribution": 0.0,
+        "rank_contribution_mode": "neutral_ignored",
+        "rank_exclusion_reason": "INVALID_STATIC_ORDER",
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
+        "rank_signal_available": false,
+        "rank_signal_valid": false,
+        "schema_version": "brain2_rank_contract_v1"
+      },
       "reason_codes": [
         "HOST_STATE",
         "DOUBLE_HEAVY",
@@ -307,17 +373,20 @@
         "DUE_DOUBLE_ACTIVE",
         "POSITIONAL_SIGNAL",
         "MODE_BOXED",
-        "WATCH_STATE"
+        "RANK_SIGNAL_UNAVAILABLE",
+        "UNRESOLVED_STATE"
       ],
       "score_rank": 2,
       "state_key": "Delaware4",
       "translator_route": "none"
     },
     {
+      "analytical_rank": null,
+      "analytical_score": null,
       "blockers": [
-        "SHOULDER_STATE"
+        "RANK_SIGNAL_UNAVAILABLE"
       ],
-      "board_priority": "tier2",
+      "board_priority": "unavailable",
       "candidate_focus": {
         "primary_cluster": {
           "canonicals": [
@@ -397,9 +466,14 @@
           ]
         }
       },
-      "cap_class": "low",
-      "carryover_action": "continue",
+      "cap_class": "unavailable",
+      "carryover_action": "unresolved",
+      "display_order": 3,
+      "display_order_is_analytical": false,
+      "display_order_source": "INPUT_ROSTER_NON_ANALYTICAL",
       "environment": {
+        "analytical_rank": null,
+        "analytical_score": null,
         "blackapple_hint": "Combined:WATCH/2",
         "compound_event_hint": "-",
         "consensus_strength_class": "strong",
@@ -414,13 +488,14 @@
         "hidden_terminal_support": true,
         "last_remaining": false,
         "last_remaining_rows": 0,
+        "legacy_priority_score": 108,
         "overlap_score": 209,
         "positional_hint": "P1 digit 1 aligns across Combined, Evening, Midday (XVAR-Cons(CEM))",
         "primary_overlap_hits": 27,
-        "priority_score": 108,
         "profit_alert_hint": "A05:224:PERM,HP7",
         "r_consensus_cross_variant_tail_count": 0,
         "r_consensus_event_count": 2,
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
         "role": "shared_host",
         "spent_status": "unknown",
         "survivor_frontier_count": 27,
@@ -434,8 +509,23 @@
         "tracker_posture": "tracker-strong",
         "vtrac_alignment": "aligned"
       },
+      "input_order": 3,
+      "legacy_priority_score": 108,
+      "legacy_static_rank": 3,
       "mode": "boxed",
-      "posture": "WATCH",
+      "posture": "UNRESOLVED",
+      "rank_contract": {
+        "analytical_rank": null,
+        "analytical_rank_source": null,
+        "analytical_score": null,
+        "rank_contribution": 0.0,
+        "rank_contribution_mode": "neutral_ignored",
+        "rank_exclusion_reason": "INVALID_STATIC_ORDER",
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
+        "rank_signal_available": false,
+        "rank_signal_valid": false,
+        "schema_version": "brain2_rank_contract_v1"
+      },
       "reason_codes": [
         "HOST_STATE",
         "DOUBLE_HEAVY",
@@ -453,17 +543,20 @@
         "BA_WATCH",
         "POSITIONAL_SIGNAL",
         "MODE_BOXED",
-        "WATCH_STATE"
+        "RANK_SIGNAL_UNAVAILABLE",
+        "UNRESOLVED_STATE"
       ],
       "score_rank": 3,
       "state_key": "Florida4",
       "translator_route": "none"
     },
     {
+      "analytical_rank": null,
+      "analytical_score": null,
       "blockers": [
-        "SHOULDER_STATE"
+        "RANK_SIGNAL_UNAVAILABLE"
       ],
-      "board_priority": "tier2",
+      "board_priority": "unavailable",
       "candidate_focus": {
         "primary_cluster": {
           "canonicals": [
@@ -533,9 +626,14 @@
           ]
         }
       },
-      "cap_class": "low",
-      "carryover_action": "continue",
+      "cap_class": "unavailable",
+      "carryover_action": "unresolved",
+      "display_order": 4,
+      "display_order_is_analytical": false,
+      "display_order_source": "INPUT_ROSTER_NON_ANALYTICAL",
       "environment": {
+        "analytical_rank": null,
+        "analytical_score": null,
         "blackapple_hint": "Evening:ALERT/3",
         "compound_event_hint": "Evening:CARRY_PERM:P70",
         "consensus_strength_class": "none",
@@ -550,13 +648,14 @@
         "hidden_terminal_support": true,
         "last_remaining": false,
         "last_remaining_rows": 0,
+        "legacy_priority_score": 98,
         "overlap_score": 240,
         "positional_hint": "P1 digit 2 aligns across Combined, Evening, Midday (XVAR-Cons(CEM))",
         "primary_overlap_hits": 31,
-        "priority_score": 98,
         "profit_alert_hint": "A04:078:PERSIST,BA",
         "r_consensus_cross_variant_tail_count": 0,
         "r_consensus_event_count": 0,
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
         "role": "shared_host",
         "spent_status": "unknown",
         "survivor_frontier_count": 27,
@@ -570,8 +669,23 @@
         "tracker_posture": "tracker-rich",
         "vtrac_alignment": "aligned"
       },
+      "input_order": 4,
+      "legacy_priority_score": 98,
+      "legacy_static_rank": 4,
       "mode": "boxed",
-      "posture": "WATCH",
+      "posture": "UNRESOLVED",
+      "rank_contract": {
+        "analytical_rank": null,
+        "analytical_rank_source": null,
+        "analytical_score": null,
+        "rank_contribution": 0.0,
+        "rank_contribution_mode": "neutral_ignored",
+        "rank_exclusion_reason": "INVALID_STATIC_ORDER",
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
+        "rank_signal_available": false,
+        "rank_signal_valid": false,
+        "schema_version": "brain2_rank_contract_v1"
+      },
       "reason_codes": [
         "HOST_STATE",
         "DOUBLE_HEAVY",
@@ -587,17 +701,20 @@
         "DUE_DOUBLE_ACTIVE",
         "POSITIONAL_SIGNAL",
         "MODE_BOXED",
-        "WATCH_STATE"
+        "RANK_SIGNAL_UNAVAILABLE",
+        "UNRESOLVED_STATE"
       ],
       "score_rank": 4,
       "state_key": "Indiana4",
       "translator_route": "none"
     },
     {
+      "analytical_rank": null,
+      "analytical_score": null,
       "blockers": [
-        "SHOULDER_STATE"
+        "RANK_SIGNAL_UNAVAILABLE"
       ],
-      "board_priority": "tier3",
+      "board_priority": "unavailable",
       "candidate_focus": {
         "primary_cluster": {
           "canonicals": [
@@ -666,9 +783,14 @@
           ]
         }
       },
-      "cap_class": "low",
-      "carryover_action": "continue",
+      "cap_class": "unavailable",
+      "carryover_action": "unresolved",
+      "display_order": 5,
+      "display_order_is_analytical": false,
+      "display_order_source": "INPUT_ROSTER_NON_ANALYTICAL",
       "environment": {
+        "analytical_rank": null,
+        "analytical_score": null,
         "blackapple_hint": "Combined:OFF/1",
         "compound_event_hint": "-",
         "consensus_strength_class": "none",
@@ -683,13 +805,14 @@
         "hidden_terminal_support": true,
         "last_remaining": false,
         "last_remaining_rows": 0,
+        "legacy_priority_score": 88,
         "overlap_score": 199,
         "positional_hint": "P1 digit 1 aligns across Combined, Evening, Midday (XVAR-Cons(CEM))",
         "primary_overlap_hits": 25,
-        "priority_score": 88,
         "profit_alert_hint": "A05:119:PERM,HP3",
         "r_consensus_cross_variant_tail_count": 0,
         "r_consensus_event_count": 0,
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
         "role": "shared_host",
         "spent_status": "unknown",
         "survivor_frontier_count": 27,
@@ -703,8 +826,23 @@
         "tracker_posture": "tracker-support",
         "vtrac_alignment": "aligned"
       },
+      "input_order": 5,
+      "legacy_priority_score": 88,
+      "legacy_static_rank": 5,
       "mode": "boxed",
-      "posture": "WATCH",
+      "posture": "UNRESOLVED",
+      "rank_contract": {
+        "analytical_rank": null,
+        "analytical_rank_source": null,
+        "analytical_score": null,
+        "rank_contribution": 0.0,
+        "rank_contribution_mode": "neutral_ignored",
+        "rank_exclusion_reason": "INVALID_STATIC_ORDER",
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
+        "rank_signal_available": false,
+        "rank_signal_valid": false,
+        "schema_version": "brain2_rank_contract_v1"
+      },
       "reason_codes": [
         "HOST_STATE",
         "DOUBLE_HEAVY",
@@ -718,17 +856,20 @@
         "DUE_DOUBLE_ACTIVE",
         "POSITIONAL_SIGNAL",
         "MODE_BOXED",
-        "WATCH_STATE"
+        "RANK_SIGNAL_UNAVAILABLE",
+        "UNRESOLVED_STATE"
       ],
       "score_rank": 5,
       "state_key": "Michigan4",
       "translator_route": "none"
     },
     {
+      "analytical_rank": null,
+      "analytical_score": null,
       "blockers": [
-        "SHOULDER_STATE"
+        "RANK_SIGNAL_UNAVAILABLE"
       ],
-      "board_priority": "tier3",
+      "board_priority": "unavailable",
       "candidate_focus": {
         "primary_cluster": {
           "canonicals": [
@@ -808,9 +949,14 @@
           ]
         }
       },
-      "cap_class": "low",
-      "carryover_action": "continue",
+      "cap_class": "unavailable",
+      "carryover_action": "unresolved",
+      "display_order": 6,
+      "display_order_is_analytical": false,
+      "display_order_source": "INPUT_ROSTER_NON_ANALYTICAL",
       "environment": {
+        "analytical_rank": null,
+        "analytical_score": null,
         "blackapple_hint": "Combined:WATCH/2",
         "compound_event_hint": "Combined:ENGINE_GOV:P85",
         "consensus_strength_class": "strong",
@@ -825,13 +971,14 @@
         "hidden_terminal_support": true,
         "last_remaining": false,
         "last_remaining_rows": 0,
+        "legacy_priority_score": 78,
         "overlap_score": 264,
         "positional_hint": "P1 digit 7 aligns across Combined, Evening, Midday (XVAR-Cons(CEM))",
         "primary_overlap_hits": 34,
-        "priority_score": 78,
         "profit_alert_hint": "A11:006:HOT,CONS",
         "r_consensus_cross_variant_tail_count": 0,
         "r_consensus_event_count": 7,
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
         "role": "shared_host",
         "spent_status": "unknown",
         "survivor_frontier_count": 27,
@@ -845,8 +992,23 @@
         "tracker_posture": "tracker-strong",
         "vtrac_alignment": "aligned"
       },
+      "input_order": 6,
+      "legacy_priority_score": 78,
+      "legacy_static_rank": 6,
       "mode": "boxed",
-      "posture": "WATCH",
+      "posture": "UNRESOLVED",
+      "rank_contract": {
+        "analytical_rank": null,
+        "analytical_rank_source": null,
+        "analytical_score": null,
+        "rank_contribution": 0.0,
+        "rank_contribution_mode": "neutral_ignored",
+        "rank_exclusion_reason": "INVALID_STATIC_ORDER",
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
+        "rank_signal_available": false,
+        "rank_signal_valid": false,
+        "schema_version": "brain2_rank_contract_v1"
+      },
       "reason_codes": [
         "HOST_STATE",
         "DOUBLE_HEAVY",
@@ -865,17 +1027,20 @@
         "COMPOUND_EVENT",
         "POSITIONAL_SIGNAL",
         "MODE_BOXED",
-        "WATCH_STATE"
+        "RANK_SIGNAL_UNAVAILABLE",
+        "UNRESOLVED_STATE"
       ],
       "score_rank": 6,
       "state_key": "NewJersey4",
       "translator_route": "none"
     },
     {
+      "analytical_rank": null,
+      "analytical_score": null,
       "blockers": [
-        "SHOULDER_STATE"
+        "RANK_SIGNAL_UNAVAILABLE"
       ],
-      "board_priority": "tier3",
+      "board_priority": "unavailable",
       "candidate_focus": {
         "primary_cluster": {
           "canonicals": [
@@ -950,9 +1115,14 @@
           ]
         }
       },
-      "cap_class": "low",
-      "carryover_action": "continue",
+      "cap_class": "unavailable",
+      "carryover_action": "unresolved",
+      "display_order": 7,
+      "display_order_is_analytical": false,
+      "display_order_source": "INPUT_ROSTER_NON_ANALYTICAL",
       "environment": {
+        "analytical_rank": null,
+        "analytical_score": null,
         "blackapple_hint": "Combined:WATCH/2",
         "compound_event_hint": "-",
         "consensus_strength_class": "moderate",
@@ -967,13 +1137,14 @@
         "hidden_terminal_support": true,
         "last_remaining": false,
         "last_remaining_rows": 0,
+        "legacy_priority_score": 68,
         "overlap_score": 255,
         "positional_hint": "P1 digit 8 aligns across Combined, Evening, Midday (XVAR-Cons(CEM))",
         "primary_overlap_hits": 33,
-        "priority_score": 68,
         "profit_alert_hint": "A05:559:PERM,HP4",
         "r_consensus_cross_variant_tail_count": 0,
         "r_consensus_event_count": 1,
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
         "role": "shared_host",
         "spent_status": "unknown",
         "survivor_frontier_count": 27,
@@ -987,8 +1158,23 @@
         "tracker_posture": "tracker-strong",
         "vtrac_alignment": "aligned"
       },
+      "input_order": 7,
+      "legacy_priority_score": 68,
+      "legacy_static_rank": 7,
       "mode": "boxed",
-      "posture": "WATCH",
+      "posture": "UNRESOLVED",
+      "rank_contract": {
+        "analytical_rank": null,
+        "analytical_rank_source": null,
+        "analytical_score": null,
+        "rank_contribution": 0.0,
+        "rank_contribution_mode": "neutral_ignored",
+        "rank_exclusion_reason": "INVALID_STATIC_ORDER",
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
+        "rank_signal_available": false,
+        "rank_signal_valid": false,
+        "schema_version": "brain2_rank_contract_v1"
+      },
       "reason_codes": [
         "HOST_STATE",
         "DOUBLE_HEAVY",
@@ -1006,17 +1192,20 @@
         "DUE_DOUBLE_ACTIVE",
         "POSITIONAL_SIGNAL",
         "MODE_BOXED",
-        "WATCH_STATE"
+        "RANK_SIGNAL_UNAVAILABLE",
+        "UNRESOLVED_STATE"
       ],
       "score_rank": 7,
       "state_key": "NewYork4",
       "translator_route": "none"
     },
     {
+      "analytical_rank": null,
+      "analytical_score": null,
       "blockers": [
-        "SHOULDER_STATE"
+        "RANK_SIGNAL_UNAVAILABLE"
       ],
-      "board_priority": "tier3",
+      "board_priority": "unavailable",
       "candidate_focus": {
         "primary_cluster": {
           "canonicals": [
@@ -1095,9 +1284,14 @@
           ]
         }
       },
-      "cap_class": "low",
-      "carryover_action": "continue",
+      "cap_class": "unavailable",
+      "carryover_action": "unresolved",
+      "display_order": 8,
+      "display_order_is_analytical": false,
+      "display_order_source": "INPUT_ROSTER_NON_ANALYTICAL",
       "environment": {
+        "analytical_rank": null,
+        "analytical_score": null,
         "blackapple_hint": "Combined:ALERT/3",
         "compound_event_hint": "Combined:CARRY_PERM:P70",
         "consensus_strength_class": "strong",
@@ -1112,13 +1306,14 @@
         "hidden_terminal_support": true,
         "last_remaining": false,
         "last_remaining_rows": 0,
+        "legacy_priority_score": 58,
         "overlap_score": 241,
         "positional_hint": "P1 digit 8 aligns across Combined, Evening, Midday (XVAR-Cons(CEM))",
         "primary_overlap_hits": 28,
-        "priority_score": 58,
         "profit_alert_hint": "A04:035:PERSIST,BA",
         "r_consensus_cross_variant_tail_count": 0,
         "r_consensus_event_count": 5,
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
         "role": "shared_host",
         "spent_status": "unknown",
         "survivor_frontier_count": 27,
@@ -1132,8 +1327,23 @@
         "tracker_posture": "tracker-rich",
         "vtrac_alignment": "aligned"
       },
+      "input_order": 8,
+      "legacy_priority_score": 58,
+      "legacy_static_rank": 8,
       "mode": "boxed",
-      "posture": "WATCH",
+      "posture": "UNRESOLVED",
+      "rank_contract": {
+        "analytical_rank": null,
+        "analytical_rank_source": null,
+        "analytical_score": null,
+        "rank_contribution": 0.0,
+        "rank_contribution_mode": "neutral_ignored",
+        "rank_exclusion_reason": "INVALID_STATIC_ORDER",
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
+        "rank_signal_available": false,
+        "rank_signal_valid": false,
+        "schema_version": "brain2_rank_contract_v1"
+      },
       "reason_codes": [
         "HOST_STATE",
         "DOUBLE_HEAVY",
@@ -1153,17 +1363,20 @@
         "DUE_DOUBLE_ACTIVE",
         "POSITIONAL_SIGNAL",
         "MODE_BOXED",
-        "WATCH_STATE"
+        "RANK_SIGNAL_UNAVAILABLE",
+        "UNRESOLVED_STATE"
       ],
       "score_rank": 8,
       "state_key": "NorthCarolina4",
       "translator_route": "none"
     },
     {
+      "analytical_rank": null,
+      "analytical_score": null,
       "blockers": [
-        "SHOULDER_STATE"
+        "RANK_SIGNAL_UNAVAILABLE"
       ],
-      "board_priority": "tier3",
+      "board_priority": "unavailable",
       "candidate_focus": {
         "primary_cluster": {
           "canonicals": [
@@ -1246,9 +1459,14 @@
           ]
         }
       },
-      "cap_class": "low",
-      "carryover_action": "continue",
+      "cap_class": "unavailable",
+      "carryover_action": "unresolved",
+      "display_order": 9,
+      "display_order_is_analytical": false,
+      "display_order_source": "INPUT_ROSTER_NON_ANALYTICAL",
       "environment": {
+        "analytical_rank": null,
+        "analytical_score": null,
         "blackapple_hint": "Combined:WATCH/2",
         "compound_event_hint": "Combined:ENGINE_GOV:P85",
         "consensus_strength_class": "strong",
@@ -1263,13 +1481,14 @@
         "hidden_terminal_support": true,
         "last_remaining": false,
         "last_remaining_rows": 0,
+        "legacy_priority_score": 48,
         "overlap_score": 344,
         "positional_hint": "P1 digit 0 aligns across Combined, Midday (XVAR-Cons(CM))",
         "primary_overlap_hits": 43,
-        "priority_score": 48,
         "profit_alert_hint": "A11:003:HOT,CONS",
         "r_consensus_cross_variant_tail_count": 0,
         "r_consensus_event_count": 8,
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
         "role": "shared_host",
         "spent_status": "unknown",
         "survivor_frontier_count": 27,
@@ -1283,8 +1502,23 @@
         "tracker_posture": "tracker-strong",
         "vtrac_alignment": "aligned"
       },
+      "input_order": 9,
+      "legacy_priority_score": 48,
+      "legacy_static_rank": 9,
       "mode": "boxed",
-      "posture": "WATCH",
+      "posture": "UNRESOLVED",
+      "rank_contract": {
+        "analytical_rank": null,
+        "analytical_rank_source": null,
+        "analytical_score": null,
+        "rank_contribution": 0.0,
+        "rank_contribution_mode": "neutral_ignored",
+        "rank_exclusion_reason": "INVALID_STATIC_ORDER",
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
+        "rank_signal_available": false,
+        "rank_signal_valid": false,
+        "schema_version": "brain2_rank_contract_v1"
+      },
       "reason_codes": [
         "HOST_STATE",
         "DOUBLE_HEAVY",
@@ -1304,17 +1538,20 @@
         "DUE_DOUBLE_ACTIVE",
         "POSITIONAL_SIGNAL",
         "MODE_BOXED",
-        "WATCH_STATE"
+        "RANK_SIGNAL_UNAVAILABLE",
+        "UNRESOLVED_STATE"
       ],
       "score_rank": 9,
       "state_key": "Ohio4",
       "translator_route": "none"
     },
     {
+      "analytical_rank": null,
+      "analytical_score": null,
       "blockers": [
-        "SHOULDER_STATE"
+        "RANK_SIGNAL_UNAVAILABLE"
       ],
-      "board_priority": "tier3",
+      "board_priority": "unavailable",
       "candidate_focus": {
         "primary_cluster": {
           "canonicals": [
@@ -1396,9 +1633,14 @@
           ]
         }
       },
-      "cap_class": "low",
-      "carryover_action": "continue",
+      "cap_class": "unavailable",
+      "carryover_action": "unresolved",
+      "display_order": 10,
+      "display_order_is_analytical": false,
+      "display_order_source": "INPUT_ROSTER_NON_ANALYTICAL",
       "environment": {
+        "analytical_rank": null,
+        "analytical_score": null,
         "blackapple_hint": "Combined:OFF/1",
         "compound_event_hint": "Combined:CARRY_PERM:P70",
         "consensus_strength_class": "strong",
@@ -1413,13 +1655,14 @@
         "hidden_terminal_support": true,
         "last_remaining": false,
         "last_remaining_rows": 0,
+        "legacy_priority_score": 38,
         "overlap_score": 314,
         "positional_hint": "P1 digit 5 aligns across Combined, Midday (XVAR-Cons(CM))",
         "primary_overlap_hits": 35,
-        "priority_score": 38,
         "profit_alert_hint": "A05:049:PERM,HP2",
         "r_consensus_cross_variant_tail_count": 0,
         "r_consensus_event_count": 4,
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
         "role": "shared_host",
         "spent_status": "unknown",
         "survivor_frontier_count": 27,
@@ -1433,8 +1676,23 @@
         "tracker_posture": "tracker-strong",
         "vtrac_alignment": "aligned"
       },
+      "input_order": 10,
+      "legacy_priority_score": 38,
+      "legacy_static_rank": 10,
       "mode": "boxed",
-      "posture": "WATCH",
+      "posture": "UNRESOLVED",
+      "rank_contract": {
+        "analytical_rank": null,
+        "analytical_rank_source": null,
+        "analytical_score": null,
+        "rank_contribution": 0.0,
+        "rank_contribution_mode": "neutral_ignored",
+        "rank_exclusion_reason": "INVALID_STATIC_ORDER",
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
+        "rank_signal_available": false,
+        "rank_signal_valid": false,
+        "schema_version": "brain2_rank_contract_v1"
+      },
       "reason_codes": [
         "HOST_STATE",
         "DOUBLE_HEAVY",
@@ -1452,17 +1710,20 @@
         "COMPOUND_EVENT",
         "POSITIONAL_SIGNAL",
         "MODE_BOXED",
-        "WATCH_STATE"
+        "RANK_SIGNAL_UNAVAILABLE",
+        "UNRESOLVED_STATE"
       ],
       "score_rank": 10,
       "state_key": "OntarioCanada4",
       "translator_route": "none"
     },
     {
+      "analytical_rank": null,
+      "analytical_score": null,
       "blockers": [
-        "SHOULDER_STATE"
+        "RANK_SIGNAL_UNAVAILABLE"
       ],
-      "board_priority": "tier3",
+      "board_priority": "unavailable",
       "candidate_focus": {
         "primary_cluster": {
           "canonicals": [
@@ -1539,9 +1800,14 @@
           ]
         }
       },
-      "cap_class": "low",
-      "carryover_action": "continue",
+      "cap_class": "unavailable",
+      "carryover_action": "unresolved",
+      "display_order": 11,
+      "display_order_is_analytical": false,
+      "display_order_source": "INPUT_ROSTER_NON_ANALYTICAL",
       "environment": {
+        "analytical_rank": null,
+        "analytical_score": null,
         "blackapple_hint": "Evening:WATCH/2",
         "compound_event_hint": "Combined:CLAMP_4:P25",
         "consensus_strength_class": "strong",
@@ -1556,13 +1822,14 @@
         "hidden_terminal_support": true,
         "last_remaining": false,
         "last_remaining_rows": 0,
+        "legacy_priority_score": 28,
         "overlap_score": 281,
         "positional_hint": "P1 digit 9 aligns across Combined, Evening, Midday (XVAR-Cons(CEM))",
         "primary_overlap_hits": 34,
-        "priority_score": 28,
         "profit_alert_hint": "A01:024:CONS,3V",
         "r_consensus_cross_variant_tail_count": 0,
         "r_consensus_event_count": 4,
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
         "role": "shared_host",
         "spent_status": "unknown",
         "survivor_frontier_count": 27,
@@ -1576,8 +1843,23 @@
         "tracker_posture": "tracker-strong",
         "vtrac_alignment": "aligned"
       },
+      "input_order": 11,
+      "legacy_priority_score": 28,
+      "legacy_static_rank": 11,
       "mode": "boxed",
-      "posture": "WATCH",
+      "posture": "UNRESOLVED",
+      "rank_contract": {
+        "analytical_rank": null,
+        "analytical_rank_source": null,
+        "analytical_score": null,
+        "rank_contribution": 0.0,
+        "rank_contribution_mode": "neutral_ignored",
+        "rank_exclusion_reason": "INVALID_STATIC_ORDER",
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
+        "rank_signal_available": false,
+        "rank_signal_valid": false,
+        "schema_version": "brain2_rank_contract_v1"
+      },
       "reason_codes": [
         "HOST_STATE",
         "DOUBLE_HEAVY",
@@ -1597,17 +1879,20 @@
         "DUE_DOUBLE_ACTIVE",
         "POSITIONAL_SIGNAL",
         "MODE_BOXED",
-        "WATCH_STATE"
+        "RANK_SIGNAL_UNAVAILABLE",
+        "UNRESOLVED_STATE"
       ],
       "score_rank": 11,
       "state_key": "Pennsylvania4",
       "translator_route": "none"
     },
     {
+      "analytical_rank": null,
+      "analytical_score": null,
       "blockers": [
-        "SHOULDER_STATE"
+        "RANK_SIGNAL_UNAVAILABLE"
       ],
-      "board_priority": "tier3",
+      "board_priority": "unavailable",
       "candidate_focus": {
         "primary_cluster": {
           "canonicals": [
@@ -1694,9 +1979,14 @@
           ]
         }
       },
-      "cap_class": "low",
-      "carryover_action": "continue",
+      "cap_class": "unavailable",
+      "carryover_action": "unresolved",
+      "display_order": 12,
+      "display_order_is_analytical": false,
+      "display_order_source": "INPUT_ROSTER_NON_ANALYTICAL",
       "environment": {
+        "analytical_rank": null,
+        "analytical_score": null,
         "blackapple_hint": "Combined:ALERT/3",
         "compound_event_hint": "Evening:CARRY_PERM:P70",
         "consensus_strength_class": "strong",
@@ -1711,13 +2001,14 @@
         "hidden_terminal_support": true,
         "last_remaining": true,
         "last_remaining_rows": 2,
+        "legacy_priority_score": 18,
         "overlap_score": 266,
         "positional_hint": "P1 digit 7 aligns across Combined, Midday (XVAR-Cons(CM))",
         "primary_overlap_hits": 30,
-        "priority_score": 18,
         "profit_alert_hint": "A05:339:PERM,HP5",
         "r_consensus_cross_variant_tail_count": 0,
         "r_consensus_event_count": 4,
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
         "role": "shared_host",
         "spent_status": "unknown",
         "survivor_frontier_count": 27,
@@ -1731,8 +2022,23 @@
         "tracker_posture": "tracker-rich",
         "vtrac_alignment": "aligned"
       },
+      "input_order": 12,
+      "legacy_priority_score": 18,
+      "legacy_static_rank": 12,
       "mode": "boxed",
-      "posture": "WATCH",
+      "posture": "UNRESOLVED",
+      "rank_contract": {
+        "analytical_rank": null,
+        "analytical_rank_source": null,
+        "analytical_score": null,
+        "rank_contribution": 0.0,
+        "rank_contribution_mode": "neutral_ignored",
+        "rank_exclusion_reason": "INVALID_STATIC_ORDER",
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
+        "rank_signal_available": false,
+        "rank_signal_valid": false,
+        "schema_version": "brain2_rank_contract_v1"
+      },
       "reason_codes": [
         "HOST_STATE",
         "DOUBLE_HEAVY",
@@ -1753,17 +2059,20 @@
         "DUE_DOUBLE_ACTIVE",
         "POSITIONAL_SIGNAL",
         "MODE_BOXED",
-        "WATCH_STATE"
+        "RANK_SIGNAL_UNAVAILABLE",
+        "UNRESOLVED_STATE"
       ],
       "score_rank": 12,
       "state_key": "PuertoRico4",
       "translator_route": "none"
     },
     {
+      "analytical_rank": null,
+      "analytical_score": null,
       "blockers": [
-        "SHOULDER_STATE"
+        "RANK_SIGNAL_UNAVAILABLE"
       ],
-      "board_priority": "tier3",
+      "board_priority": "unavailable",
       "candidate_focus": {
         "primary_cluster": {
           "canonicals": [
@@ -1844,9 +2153,14 @@
           ]
         }
       },
-      "cap_class": "low",
-      "carryover_action": "continue",
+      "cap_class": "unavailable",
+      "carryover_action": "unresolved",
+      "display_order": 13,
+      "display_order_is_analytical": false,
+      "display_order_source": "INPUT_ROSTER_NON_ANALYTICAL",
       "environment": {
+        "analytical_rank": null,
+        "analytical_score": null,
         "blackapple_hint": "Combined:WATCH/2",
         "compound_event_hint": "Evening:CLAMP_4:P25",
         "consensus_strength_class": "strong",
@@ -1861,13 +2175,14 @@
         "hidden_terminal_support": true,
         "last_remaining": false,
         "last_remaining_rows": 0,
+        "legacy_priority_score": 8,
         "overlap_score": 294,
         "positional_hint": "P1 digit 7 aligns across Combined, Evening, Midday (XVAR-Cons(CEM))",
         "primary_overlap_hits": 36,
-        "priority_score": 8,
         "profit_alert_hint": "A05:667:PERM,HP6",
         "r_consensus_cross_variant_tail_count": 0,
         "r_consensus_event_count": 3,
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
         "role": "shared_host",
         "spent_status": "unknown",
         "survivor_frontier_count": 27,
@@ -1881,8 +2196,23 @@
         "tracker_posture": "tracker-strong",
         "vtrac_alignment": "aligned"
       },
+      "input_order": 13,
+      "legacy_priority_score": 8,
+      "legacy_static_rank": 13,
       "mode": "boxed",
-      "posture": "WATCH",
+      "posture": "UNRESOLVED",
+      "rank_contract": {
+        "analytical_rank": null,
+        "analytical_rank_source": null,
+        "analytical_score": null,
+        "rank_contribution": 0.0,
+        "rank_contribution_mode": "neutral_ignored",
+        "rank_exclusion_reason": "INVALID_STATIC_ORDER",
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
+        "rank_signal_available": false,
+        "rank_signal_valid": false,
+        "schema_version": "brain2_rank_contract_v1"
+      },
       "reason_codes": [
         "HOST_STATE",
         "DOUBLE_HEAVY",
@@ -1902,17 +2232,20 @@
         "DUE_DOUBLE_ACTIVE",
         "POSITIONAL_SIGNAL",
         "MODE_BOXED",
-        "WATCH_STATE"
+        "RANK_SIGNAL_UNAVAILABLE",
+        "UNRESOLVED_STATE"
       ],
       "score_rank": 13,
       "state_key": "SouthCarolina4",
       "translator_route": "none"
     },
     {
+      "analytical_rank": null,
+      "analytical_score": null,
       "blockers": [
-        "SHOULDER_STATE"
+        "RANK_SIGNAL_UNAVAILABLE"
       ],
-      "board_priority": "tier3",
+      "board_priority": "unavailable",
       "candidate_focus": {
         "primary_cluster": {
           "canonicals": [
@@ -1991,9 +2324,14 @@
           ]
         }
       },
-      "cap_class": "low",
-      "carryover_action": "continue",
+      "cap_class": "unavailable",
+      "carryover_action": "unresolved",
+      "display_order": 14,
+      "display_order_is_analytical": false,
+      "display_order_source": "INPUT_ROSTER_NON_ANALYTICAL",
       "environment": {
+        "analytical_rank": null,
+        "analytical_score": null,
         "blackapple_hint": "Combined:ALERT/3",
         "compound_event_hint": "Midday:CARRY_PERM:P70",
         "consensus_strength_class": "strong",
@@ -2008,13 +2346,14 @@
         "hidden_terminal_support": true,
         "last_remaining": false,
         "last_remaining_rows": 0,
+        "legacy_priority_score": -2,
         "overlap_score": 302,
         "positional_hint": "P1 digit 3 aligns across Combined, Evening, Midday (XVAR-Cons(CEM))",
         "primary_overlap_hits": 38,
-        "priority_score": -2,
         "profit_alert_hint": "A05:039:PERM,HP6",
         "r_consensus_cross_variant_tail_count": 0,
         "r_consensus_event_count": 5,
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
         "role": "shared_host",
         "spent_status": "unknown",
         "survivor_frontier_count": 27,
@@ -2028,8 +2367,23 @@
         "tracker_posture": "tracker-rich",
         "vtrac_alignment": "aligned"
       },
+      "input_order": 14,
+      "legacy_priority_score": -2,
+      "legacy_static_rank": 14,
       "mode": "boxed",
-      "posture": "WATCH",
+      "posture": "UNRESOLVED",
+      "rank_contract": {
+        "analytical_rank": null,
+        "analytical_rank_source": null,
+        "analytical_score": null,
+        "rank_contribution": 0.0,
+        "rank_contribution_mode": "neutral_ignored",
+        "rank_exclusion_reason": "INVALID_STATIC_ORDER",
+        "rank_integrity_status": "INVALID_STATIC_ORDER",
+        "rank_signal_available": false,
+        "rank_signal_valid": false,
+        "schema_version": "brain2_rank_contract_v1"
+      },
       "reason_codes": [
         "HOST_STATE",
         "DOUBLE_HEAVY",
@@ -2049,7 +2403,8 @@
         "DUE_DOUBLE_ACTIVE",
         "POSITIONAL_SIGNAL",
         "MODE_BOXED",
-        "WATCH_STATE"
+        "RANK_SIGNAL_UNAVAILABLE",
+        "UNRESOLVED_STATE"
       ],
       "score_rank": 14,
       "state_key": "Virginia4",

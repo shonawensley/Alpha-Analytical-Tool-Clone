@@ -917,7 +917,13 @@ def _build_utilization_rows(
                 "winner_vtrac_index": event.get("winner_vtrac_index", ""),
                 "outcome_class": outcome,
                 "evidence_status": status,
+                "display_order": event.get("display_order", ""),
+                "display_order_source": event.get("display_order_source", ""),
                 "board_rank": event.get("board_rank", ""),
+                "analytical_rank": event.get("analytical_rank", ""),
+                "legacy_static_rank": event.get("legacy_static_rank", ""),
+                "rank_signal_valid": event.get("rank_signal_valid", ""),
+                "rank_integrity_status": event.get("rank_integrity_status", ""),
                 "board_rank_tier": event.get("board_rank_tier", ""),
                 "board_priority_score": event.get("board_priority_score", ""),
                 "top_primary_target": event.get("top_primary_target", ""),
@@ -1104,7 +1110,6 @@ def _select_case_rows(
                 -int(row.get("sharp_signal_count") or 0),
                 -int(row.get("box_source_count") or 0),
                 -_safe_float(row.get("frontier_strength_score")),
-                _safe_int(row.get("board_rank"), default=999),
                 str(row.get("date") or ""),
                 str(row.get("state_key") or ""),
             ),
@@ -1341,7 +1346,12 @@ def _render_case_dossiers(case_rows: Sequence[Dict[str, Any]], attribution_by_ev
                 "",
                 f"- Outcome: `{row.get('outcome_class', '')}`",
                 f"- Evidence status: `{row.get('evidence_status', '')}`",
-                f"- Board rank: `{row.get('board_rank', '')}`; sharp=`{row.get('sharp_signal_count', '')}`, territory=`{row.get('territory_signal_count', '')}`, broad=`{row.get('broad_context_count', '')}`",
+                (
+                    f"- Analytical board rank: `{row.get('board_rank', '')}`; "
+                    if _truthy(row.get("rank_signal_valid"))
+                    else "- Analytical board rank: `NOT_EVALUABLE` (`INVALID_STATIC_ORDER`); "
+                )
+                + f"sharp=`{row.get('sharp_signal_count', '')}`, territory=`{row.get('territory_signal_count', '')}`, broad=`{row.get('broad_context_count', '')}`",
                 f"- Frontier: `{row.get('frontier_signature_type', '') or '-'}` strength=`{row.get('frontier_signature_strength', '') or '-'}` score=`{row.get('frontier_strength_score', '') or '-'}`",
                 f"- State-day decay first resolution: `{row.get('decay_any_profile', '') or '-'}` event=`{row.get('decay_any_event', '') or '-'}`",
                 f"- Exact sources: `{row.get('exact_sources', '') or '-'}`",

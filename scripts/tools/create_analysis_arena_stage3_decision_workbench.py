@@ -840,6 +840,9 @@ def _build_casebook(focus_window: Path | None) -> Tuple[List[Dict[str, Any]], st
                 "outcome_class": row.get("outcome_class", ""),
                 "evidence_status": row.get("evidence_status", ""),
                 "board_rank": row.get("board_rank", ""),
+                "legacy_static_rank": row.get("legacy_static_rank", ""),
+                "rank_signal_valid": row.get("rank_signal_valid", ""),
+                "rank_integrity_status": row.get("rank_integrity_status", ""),
                 "sharp_signal_count": row.get("sharp_signal_count", ""),
                 "territory_signal_count": row.get("territory_signal_count", ""),
                 "box_source_count": row.get("box_source_count", ""),
@@ -883,7 +886,12 @@ def _render_casebook_md(focus_window: Path, rows: Sequence[Dict[str, Any]], path
             "- "
             f"`{row.get('date')}` `{row.get('state_key')}` `{row.get('period')}` winner=`{row.get('winner')}` "
             f"cohort=`{row.get('fixture_cohort')}` outcome=`{row.get('outcome_class')}` "
-            f"rank=`{row.get('board_rank')}` sharp=`{row.get('sharp_signal_count')}` "
+            + (
+                f"analytical_rank=`{row.get('board_rank')}` "
+                if _truthy(row.get("rank_signal_valid"))
+                else "analytical_rank=`NOT_EVALUABLE` "
+            )
+            + f"sharp=`{row.get('sharp_signal_count')}` "
             f"lesson=`{row.get('stage3_lesson')}`"
         )
     lines.extend(

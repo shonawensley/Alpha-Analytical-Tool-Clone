@@ -19,6 +19,12 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List, Mapping, Optional, Sequence, Tuple
 
+from scripts.tools.brain2_rank_contract import (
+    DISPLAY_ORDER_SOURCE_INPUT_ROSTER,
+    analytical_rank,
+    rank_contract_from_row,
+)
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RUNS2_PREDICTIVE_DIR = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2" / "PREDICTIVE"
@@ -329,6 +335,7 @@ def _load_arena_state_summary(state_dir: Path, *, profile: str, experiment_tag: 
     arena = (aggregated or {}).get("arena_synthesis") if isinstance(aggregated, Mapping) else {}
     brain2 = (sandbox or {}).get("brain2_context") if isinstance(sandbox, Mapping) else {}
     scoreboard = (brain2 or {}).get("scoreboard_row") if isinstance(brain2, Mapping) else {}
+    rank_contract = rank_contract_from_row(scoreboard if isinstance(scoreboard, Mapping) else {})
     top_profit = []
     for row in (brain2.get("top_profit_alerts") or [])[:3] if isinstance(brain2, Mapping) else []:
         if not isinstance(row, Mapping):
@@ -351,7 +358,19 @@ def _load_arena_state_summary(state_dir: Path, *, profile: str, experiment_tag: 
         "top_families": _ranked_values((arena or {}).get("dominant_families")),
         "top_vtrac": _ranked_values((arena or {}).get("dominant_vtrac_indices")),
         "reinforced": _ranked_values((arena or {}).get("context_reinforced_canonicals")),
-        "score_rank": scoreboard.get("score_rank") if isinstance(scoreboard, Mapping) else None,
+        "analytical_rank": rank_contract.get("analytical_rank"),
+        "rank_signal_valid": rank_contract.get("rank_signal_valid"),
+        "rank_integrity_status": rank_contract.get("rank_integrity_status"),
+        "input_order": (
+            scoreboard.get("input_order") or scoreboard.get("input_rank")
+            if isinstance(scoreboard, Mapping)
+            else None
+        ),
+        "legacy_static_rank": (
+            scoreboard.get("legacy_static_rank") or scoreboard.get("score_rank")
+            if isinstance(scoreboard, Mapping)
+            else None
+        ),
         "role": scoreboard.get("role") if isinstance(scoreboard, Mapping) else "",
         "bucket": scoreboard.get("targeting_bucket") if isinstance(scoreboard, Mapping) else "",
         "tracker": scoreboard.get("tracker_posture") if isinstance(scoreboard, Mapping) else "",
@@ -447,7 +466,7 @@ def main() -> None:
         raise SystemExit(f"Predictive portfolio already exists: {_safe_rel(out_path)} (use --force to overwrite).")
 
     table_rows: List[Dict[str, Any]] = []
-    for state_key in states:
+    for input_order, state_key in enumerate(states, start=1):
         state_dir = day_dir / state_key
         alerts = _parse_profit_alerts_for_state(pa_rows, state_key=state_key)
         packs_count, union_count, dd_canon, top_support_count, top_support = _load_candidate_universe_summary_tagged(
@@ -488,24 +507,22 @@ def main() -> None:
                 f"{alert['variant']}:{alert['alert_id']}:{alert['suggested']}:{canon_label}"
             )
 
-        arena_rank = arena.get("score_rank")
-        try:
-            arena_rank_int = int(arena_rank)
-        except Exception:
-            arena_rank_int = 9999
+        arena_rank_int = analytical_rank(arena)
+        legacy_arena_rank = arena.get("legacy_static_rank")
 
         top_support_label = (
             f"{top_support_count}:{' '.join(top_support)}" if top_support_count and top_support else ("0" if packs_count else "-")
         )
         arena_row_label = (
-            f"#{arena_rank_int} {arena.get('role') or '-'} / {arena.get('bucket') or '-'} / {arena.get('tracker') or '-'}"
-            if arena_rank_int != 9999
-            else "-"
+            f"analytical=#{arena_rank_int} {arena.get('role') or '-'} / {arena.get('bucket') or '-'} / {arena.get('tracker') or '-'}"
+            if arena_rank_int is not None
+            else f"analytical=unavailable legacy=#{legacy_arena_rank or '-'} {arena.get('role') or '-'} / {arena.get('bucket') or '-'} / {arena.get('tracker') or '-'}"
         )
 
         table_rows.append(
             {
                 "StateKey": state_key,
+                "input_order": int(arena.get("input_order") or input_order),
                 "alerts_count": len(alerts),
                 "alerts_strength_sum_top": alert_strength_sum,
                 "alerts_top": "; ".join(alert_labels) if alert_labels else "-",
@@ -521,6 +538,8 @@ def main() -> None:
                 "play_b24_src": _safe_rel(b24_src) if b24_src else "-",
                 "play_b36_src": _safe_rel(b36_src) if b36_src else "-",
                 "arena_rank": arena_rank_int,
+                "arena_legacy_rank": legacy_arena_rank,
+                "arena_rank_signal_valid": bool(arena.get("rank_signal_valid")),
                 "arena_row_label": arena_row_label,
                 "arena_top": " ".join(arena.get("top_canonicals") or []) or "-",
                 "arena_vtrac": " ".join(arena.get("top_vtrac") or []) or "-",
@@ -562,14 +581,35 @@ def main() -> None:
             )
         )
     else:
-        table_rows.sort(
-            key=lambda r: (
-                int(r.get("arena_rank") or 9999),
-                int(r["candidate_union"]),
-                -int(r.get("alerts_strength_sum_top") or 0),
-                str(r["StateKey"]),
+        if any(bool(row.get("arena_rank_signal_valid")) and row.get("arena_rank") is not None for row in table_rows):
+            table_rows.sort(
+                key=lambda r: (
+                    0 if bool(r.get("arena_rank_signal_valid")) and r.get("arena_rank") is not None else 1,
+                    int(r.get("arena_rank") or 9999),
+                    str(r["StateKey"]),
+                )
             )
-        )
+        else:
+            # Deterministic display order only; do not substitute another heuristic.
+            table_rows.sort(key=lambda r: (int(r.get("input_order") or 9999), str(r["StateKey"])))
+
+    has_valid_arena_rank = any(
+        bool(row.get("arena_rank_signal_valid")) and row.get("arena_rank") is not None
+        for row in table_rows
+    )
+    if rank_by == "arena_first" and has_valid_arena_rank:
+        display_order_source = "ANALYTICAL_RANK"
+        display_order_is_analytical = True
+    elif rank_by == "arena_first":
+        display_order_source = DISPLAY_ORDER_SOURCE_INPUT_ROSTER
+        display_order_is_analytical = False
+    else:
+        display_order_source = f"{rank_by.upper()}_HEURISTIC_NON_ANALYTICAL"
+        display_order_is_analytical = False
+    for display_order, row in enumerate(table_rows, start=1):
+        row["display_order"] = display_order
+        row["display_order_source"] = display_order_source
+        row["display_order_is_analytical"] = display_order_is_analytical
 
     lines: List[str] = []
     lines.append(f"# Analysis Arena Predictive Portfolio — D={args.date}")
@@ -578,6 +618,11 @@ def main() -> None:
     lines.append("- Cross-state pre-results triage for the Analysis Arena branch.")
     lines.append("- Brain 1 / Brain 2 posture is surfaced first; Candidate Universe / Play Card remain the downstream control arm.")
     lines.append(f"- Profile: `{profile}` | experiment tag: `{experiment_tag or 'untagged'}` | rank_by: `{rank_by}`")
+    if rank_by == "arena_first" and not has_valid_arena_rank:
+        lines.append(
+            "- Rank integrity: `NOT_EVALUABLE / INVALID_STATIC_ORDER`; "
+            f"display order source is `{display_order_source}` and carries no analytical meaning."
+        )
     lines.append("")
     lines.append("SSOT anchors")
     lines.append(f"- Arena system map: `{_safe_rel(SYSTEM_MAP_PATH)}`")
@@ -605,11 +650,12 @@ def main() -> None:
     lines.append("")
     lines.append("## Arena-First Board Snapshot")
     lines.append("")
-    for row in [
+    valid_arena_rows = [
         item
-        for item in sorted(table_rows, key=lambda value: (value.get("arena_rank", 9999), value["StateKey"]))
-        if int(item.get("arena_rank", 9999)) != 9999
-    ][:8]:
+        for item in table_rows
+        if bool(item.get("arena_rank_signal_valid")) and item.get("arena_rank") is not None
+    ]
+    for row in sorted(valid_arena_rows, key=lambda value: (int(value["arena_rank"]), value["StateKey"]))[:8]:
         lines.append(
             f"- **{row['StateKey']}**: `{row['arena_row_label']}` | canonicals `{row['arena_top'] or '-'}` | vtrac `{row['arena_vtrac'] or '-'}` | top_profit `{row['top_profit']}`"
         )
@@ -640,7 +686,7 @@ def main() -> None:
     lines.append("- Which states are strongest from the arena-first lens?: `...`")
     lines.append("- Which states are strongest only from the control-arm lens?: `...`")
     lines.append("- Any state where tracker hints materially outran the control arm?: `...`")
-    lines.append("- Any state where arena rank feels too high or too low?: `...`")
+    lines.append("- Any rank-integrity or source-provenance gap to record?: `...`")
     lines.append("")
 
     out_path.write_text("\n".join(lines).rstrip() + "\n", encoding="utf-8")

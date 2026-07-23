@@ -27,6 +27,7 @@ from scripts.tools.analysis_arena_window_utils import (
     safe_rel,
     validation_dir,
 )
+from scripts.tools.brain2_rank_contract import input_order_key, rank_evaluation_status
 
 
 def _parse_args() -> argparse.Namespace:
@@ -157,16 +158,19 @@ def _narrative_payload(
     hint_due_counter: Counter[str] = Counter()
     hint_consensus_counter: Counter[str] = Counter()
     previous_day_canonicals: set[str] = set()
+    rank_contract_rows: List[Dict[str, Any]] = []
 
     for results_date in dates:
         scoreboard = load_scoreboard(window_root, results_date)
         shadow = load_shadow(window_root, results_date)
         manifest = load_translation_manifest(window_root, results_date)
         board_verdict = scoreboard.get("board_verdict") or {}
-        rows = scoreboard.get("scoreboard_rows") or []
-        for row in sorted(rows, key=lambda item: int(item.get("score_rank") or 9999))[:5]:
+        rows = [row for row in (scoreboard.get("scoreboard_rows") or []) if isinstance(row, dict)]
+        rank_contract_rows.extend(rows)
+        day_rank_evaluation = rank_evaluation_status(rows)
+        for row in sorted(rows, key=input_order_key):
             state_key = str(row.get("state_key") or "").strip()
-            if state_key:
+            if state_key and day_rank_evaluation["evaluable"]:
                 top_state_counter[state_key] += 1
             role = str(row.get("role") or "").strip()
             if role:
@@ -182,16 +186,29 @@ def _narrative_payload(
             posture = str(decision.get("posture") or "").strip()
             if posture:
                 posture_counter[posture] += 1
-        if board_verdict.get("top_primary_target"):
+        if day_rank_evaluation["evaluable"] and board_verdict.get("top_primary_target"):
             primary_targets[str(board_verdict["top_primary_target"])] += 1
-        if board_verdict.get("best_clean_host"):
+        if day_rank_evaluation["evaluable"] and board_verdict.get("best_clean_host"):
             best_clean_hosts[str(board_verdict["best_clean_host"])] += 1
         day_primary_targets.append(
             {
                 "date": results_date,
-                "top_primary_target": board_verdict.get("top_primary_target", ""),
-                "best_clean_host": board_verdict.get("best_clean_host", ""),
-                "secondary_target": board_verdict.get("secondary_target", ""),
+                "rank_evaluation_status": day_rank_evaluation["status"],
+                "top_primary_target": (
+                    board_verdict.get("top_primary_target", "")
+                    if day_rank_evaluation["evaluable"]
+                    else None
+                ),
+                "best_clean_host": (
+                    board_verdict.get("best_clean_host", "")
+                    if day_rank_evaluation["evaluable"]
+                    else None
+                ),
+                "secondary_target": (
+                    board_verdict.get("secondary_target", "")
+                    if day_rank_evaluation["evaluable"]
+                    else None
+                ),
             }
         )
         current_day_canonicals: set[str] = set()
@@ -318,6 +335,7 @@ def _narrative_payload(
     decay_examples = decay_payload.get("examples") or {}
     decay_interpretation = list(decay_payload.get("interpretation") or [])
 
+    rank_evaluation = rank_evaluation_status(rank_contract_rows)
     return {
         "metadata": perf_payload.get("metadata") or {},
         "window_overview": {
@@ -326,8 +344,10 @@ def _narrative_payload(
             "top_board_states": _fmt_top(top_state_counter, limit=10),
             "board_roles": _fmt_top(role_counter, limit=10),
             "shadow_postures": _fmt_top(posture_counter, limit=10),
+            "rank_evaluation": rank_evaluation,
         },
         "board_truth_read": {
+            "rank_evaluation": rank_evaluation,
             "primary_targets": _fmt_top(primary_targets, limit=8),
             "best_clean_hosts": _fmt_top(best_clean_hosts, limit=8),
             "daily_targets": day_primary_targets,
@@ -445,22 +465,29 @@ def _render_markdown(payload: Dict[str, Any], *, perf_json_path: Path) -> str:
     lines.append("")
     lines.append("## 2. Board-Level Truth Read")
     lines.append("")
-    lines.append(
-        "- Top board states across the window: "
-        + (", ".join(f"`{row['value']}` x{row['count']}" for row in overview["top_board_states"]) or "_none_")
-    )
+    if not (overview.get("rank_evaluation") or {}).get("evaluable"):
+        lines.append("- Top board states across the window: `NOT_EVALUABLE` (`INVALID_STATIC_ORDER`).")
+    else:
+        lines.append(
+            "- Top board states across the window: "
+            + (", ".join(f"`{row['value']}` x{row['count']}" for row in overview["top_board_states"]) or "_none_")
+        )
     lines.append(
         "- Repeated board roles: "
         + (", ".join(f"`{row['value']}` x{row['count']}" for row in overview["board_roles"]) or "_none_")
     )
-    lines.append(
-        "- Repeated top primary targets: "
-        + (", ".join(f"`{row['value']}` x{row['count']}" for row in board["primary_targets"]) or "_none_")
-    )
-    lines.append(
-        "- Repeated best clean hosts: "
-        + (", ".join(f"`{row['value']}` x{row['count']}" for row in board["best_clean_hosts"]) or "_none_")
-    )
+    if not (board.get("rank_evaluation") or {}).get("evaluable"):
+        lines.append("- Repeated top-primary targets: `NOT_EVALUABLE` (`INVALID_STATIC_ORDER`).")
+        lines.append("- Repeated best-clean hosts: `NOT_EVALUABLE` (`INVALID_STATIC_ORDER`).")
+    else:
+        lines.append(
+            "- Repeated top primary targets: "
+            + (", ".join(f"`{row['value']}` x{row['count']}" for row in board["primary_targets"]) or "_none_")
+        )
+        lines.append(
+            "- Repeated best clean hosts: "
+            + (", ".join(f"`{row['value']}` x{row['count']}" for row in board["best_clean_hosts"]) or "_none_")
+        )
     lines.append("")
     lines.append("## 3. Shared Complexes / Carryover / Decay")
     lines.append("")
@@ -517,10 +544,13 @@ def _render_markdown(payload: Dict[str, Any], *, perf_json_path: Path) -> str:
     }
     top_primary_cohort = cohort_lookup.get("top_primary_target")
     if top_primary_cohort:
-        lines.append(
-            f"- Top-primary target decay: same_day=`{top_primary_cohort.get('same_day_resolved', 0)}/{top_primary_cohort.get('state_days', 0)}` "
-            f"horizon=`{top_primary_cohort.get('horizon_resolved', 0)}/{top_primary_cohort.get('state_days', 0)}`"
-        )
+        if top_primary_cohort.get("evaluable") is False:
+            lines.append("- Top-primary target decay: `NOT_EVALUABLE` (`INVALID_STATIC_ORDER`).")
+        else:
+            lines.append(
+                f"- Top-primary target decay: same_day=`{top_primary_cohort.get('same_day_resolved', 0)}/{top_primary_cohort.get('state_days', 0)}` "
+                f"horizon=`{top_primary_cohort.get('horizon_resolved', 0)}/{top_primary_cohort.get('state_days', 0)}`"
+            )
     if decay.get("interpretation"):
         lines.append("- Decay interpretation: " + "; ".join(str(item) for item in (decay.get("interpretation") or [])[:3]))
     lines.append("")
@@ -636,8 +666,7 @@ def _render_markdown(payload: Dict[str, Any], *, perf_json_path: Path) -> str:
     for row in (translator.get("priority_examples") or [])[:5]:
         lines.append(
             f"  - `{row.get('date', '')}` `{row.get('state', '')}` `{row.get('period', '')}` winner=`{row.get('winner', '')}` "
-            f"cohort=`{row.get('primary_cohort', '')}` frontier=`{row.get('frontier_signature_type', '')}` "
-            f"rank=`{row.get('board_rank', 0)}`"
+            f"cohort=`{row.get('primary_cohort', '')}` frontier=`{row.get('frontier_signature_type', '')}`"
         )
     for bullet in translator.get("interpretation") or []:
         lines.append(f"  - {bullet}")

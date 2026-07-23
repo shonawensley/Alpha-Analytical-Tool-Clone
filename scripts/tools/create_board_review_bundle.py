@@ -37,6 +37,11 @@ from scripts.tools.build_shadow_decision_policy import (
     build_shadow_decision_policy_payload,
     write_shadow_decision_policy_files,
 )
+from scripts.tools.brain2_rank_contract import (
+    DISPLAY_ORDER_SOURCE_INPUT_ROSTER,
+    RANK_INTEGRITY_INVALID_STATIC_ORDER,
+    unavailable_rank_contract,
+)
 
 
 def _slugify(value: str) -> str:
@@ -69,10 +74,17 @@ def build_board_review_bundle_payload(
     state_decisions = decision_policy_payload.get("state_decisions") if isinstance(decision_policy_payload.get("state_decisions"), list) else []
 
     return {
-        "schema_version": "board_review_bundle_v0",
+        "schema_version": "board_review_bundle_v1",
         "metadata": {
             "results_date": results_date,
             "board_name": board_name,
+            "rank_integrity_status": RANK_INTEGRITY_INVALID_STATIC_ORDER,
+        },
+        "rank_contract": scoreboard_payload.get("rank_contract") or unavailable_rank_contract(),
+        "display_order_contract": scoreboard_payload.get("display_order_contract")
+        or {
+            "display_order_source": DISPLAY_ORDER_SOURCE_INPUT_ROSTER,
+            "display_order_is_analytical": False,
         },
         "artifacts": {
             "overlay_json": _safe_rel(overlay_json_path),
@@ -86,10 +98,10 @@ def build_board_review_bundle_payload(
         "board_verdict": board_verdict,
         "shadow_decision_policy": shadow_verdict,
         "highlights": {
-            "top_scoreboard_rows": scoreboard_rows[:5],
+            "board_evidence_rows": scoreboard_rows[:5],
             "duplicate_pairs": duplicate_pairs[:5],
             "direct_cross_state_receipts": direct_cross[:5],
-            "top_decisions": state_decisions[:5],
+            "decision_receipts": state_decisions[:5],
         },
         "workflow_manifest": {
             "brain1_runtime_entrypoint": "scripts/tools/build_aggregated_analysis_arena.py",
@@ -120,6 +132,10 @@ def build_board_review_bundle_markdown(payload: Dict[str, Any]) -> str:
         "",
         "Purpose: one-step Brain 2 board review bundle linking the runtime overlay and compact scoreboard.",
         "",
+        "**RANK INTEGRITY STATUS: `INVALID_STATIC_ORDER`.** Analytical rank and rank-derived top-state decisions are unavailable; structural evidence remains reviewable.",
+        "",
+        "**DISPLAY ORDER:** `INPUT_ROSTER_NON_ANALYTICAL`; navigation only, with no analytical meaning.",
+        "",
         "## Artifacts",
         "",
         f"- overlay_json: `{artifacts.get('overlay_json') or '-'}`",
@@ -141,6 +157,8 @@ def build_board_review_bundle_markdown(payload: Dict[str, Any]) -> str:
         "",
         "## Board Verdict",
         "",
+        f"- rank_evaluation: `{(board_verdict.get('rank_evaluation') or {}).get('status') or '-'}`",
+        f"- rank_unavailable_reason: `{board_verdict.get('rank_unavailable_reason') or '-'}`",
         f"- top_primary_target: `{board_verdict.get('top_primary_target') or '-'}`",
         f"- secondary_target: `{board_verdict.get('secondary_target') or '-'}`",
         f"- best_clean_host: `{board_verdict.get('best_clean_host') or '-'}`",
@@ -157,16 +175,17 @@ def build_board_review_bundle_markdown(payload: Dict[str, Any]) -> str:
         f"- play_states: `{', '.join(shadow_verdict.get('play_states') or []) or '-'}`",
         f"- watch_states: `{', '.join(shadow_verdict.get('watch_states') or []) or '-'}`",
         f"- skip_states: `{', '.join(shadow_verdict.get('skip_states') or []) or '-'}`",
+        f"- unresolved_states: `{', '.join(shadow_verdict.get('unresolved_states') or []) or '-'}`",
     ]
 
-    top_rows = highlights.get("top_scoreboard_rows") if isinstance(highlights.get("top_scoreboard_rows"), list) else []
+    top_rows = highlights.get("board_evidence_rows") if isinstance(highlights.get("board_evidence_rows"), list) else []
     if top_rows:
-        lines.extend(["", "## Top Scoreboard Rows", "", "| Rank | State | Priority | Role | Targeting |", "|---:|---|---:|---|---|"])
+        lines.extend(["", "## Board Evidence Rows", "", "| Input Order | Legacy Rank | Analytical Rank | State | Legacy Priority | Role | Targeting |", "|---:|---:|---:|---|---:|---|---|"])
         for row in top_rows:
             if not isinstance(row, dict):
                 continue
             lines.append(
-                f"| {row.get('score_rank')} | {row.get('state_key')} | {row.get('priority_score')} | {row.get('role')} | {row.get('targeting_bucket')} |"
+                f"| {row.get('input_order')} | {row.get('legacy_static_rank')} | {row.get('analytical_rank') or '-'} | {row.get('state_key')} | {row.get('legacy_priority_score')} | {row.get('role')} | {row.get('targeting_bucket')} |"
             )
 
     dupes = highlights.get("duplicate_pairs") if isinstance(highlights.get("duplicate_pairs"), list) else []
@@ -189,14 +208,14 @@ def build_board_review_bundle_markdown(payload: Dict[str, Any]) -> str:
                 f"- `{row.get('state_a')} -> {row.get('state_b')}` families=`{', '.join(row.get('canonical_families') or []) or '-'}`"
             )
 
-    top_decisions = highlights.get("top_decisions") if isinstance(highlights.get("top_decisions"), list) else []
+    top_decisions = highlights.get("decision_receipts") if isinstance(highlights.get("decision_receipts"), list) else []
     if top_decisions:
-        lines.extend(["", "## Top Shadow Decisions", "", "| Rank | State | Posture | Mode | Cap | Route |", "|---:|---|---|---|---|---|"])
+        lines.extend(["", "## Shadow Decision Receipts", "", "| Input Order | Legacy Rank | Analytical Rank | State | Posture | Mode | Cap | Route |", "|---:|---:|---:|---|---|---|---|---|"])
         for row in top_decisions:
             if not isinstance(row, dict):
                 continue
             lines.append(
-                f"| {row.get('score_rank')} | {row.get('state_key')} | {row.get('posture')} | {row.get('mode')} | {row.get('cap_class')} | {row.get('translator_route')} |"
+                f"| {row.get('input_order')} | {row.get('legacy_static_rank')} | {row.get('analytical_rank') or '-'} | {row.get('state_key')} | {row.get('posture')} | {row.get('mode')} | {row.get('cap_class')} | {row.get('translator_route')} |"
             )
 
     return "\n".join(lines).rstrip() + "\n"

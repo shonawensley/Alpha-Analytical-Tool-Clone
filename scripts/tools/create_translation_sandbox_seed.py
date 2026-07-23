@@ -27,6 +27,13 @@ if str(REPO_ROOT) not in sys.path:
 from scripts.tools.build_board_spillover_overlay import _default_out_name as _overlay_default_out_name
 from scripts.tools.create_board_scoreboard import _default_out_name as _scoreboard_default_out_name
 from scripts.tools.build_shadow_decision_policy import _default_out_name as _dpl_default_out_name
+from scripts.tools.brain2_rank_contract import (
+    RANK_INTEGRITY_INVALID_STATIC_ORDER,
+    display_order_contract_from_row,
+    quarantine_decision,
+    rank_contract_from_row,
+    unavailable_rank_contract,
+)
 
 
 def _now_iso() -> str:
@@ -405,7 +412,9 @@ def build_translation_sandbox_state_payload(
 ) -> Dict[str, Any]:
     state_key = str(overlay_summary.get("state_key") or "").strip()
     scoreboard = dict(scoreboard_row or {})
-    decision = dict(decision_row or {})
+    rank_contract = rank_contract_from_row(scoreboard)
+    display_order_contract = display_order_contract_from_row(scoreboard)
+    decision = quarantine_decision(decision_row, scoreboard)
     positional_rows = [row for row in (overlay_summary.get("positional_shortlist_top") or []) if isinstance(row, Mapping)]
     candidate_summary = _summarize_candidate_universe(candidate_universe_payload, candidate_universe_path)
     play_card_summary = _summarize_play_card(play_card_payload, play_card_path)
@@ -460,7 +469,7 @@ def build_translation_sandbox_state_payload(
     ][:10]
 
     payload = {
-        "schema_version": "translation_sandbox_seed_v0",
+        "schema_version": "translation_sandbox_seed_v1",
         "metadata": {
             "generated_at": _now_iso(),
             "results_date": results_date,
@@ -474,7 +483,10 @@ def build_translation_sandbox_state_payload(
             "shadow_decision_policy_json": _safe_rel(decision_policy_path),
             "candidate_universe_path": _safe_rel(candidate_universe_path) if isinstance(candidate_universe_path, Path) else None,
             "play_card_path": _safe_rel(play_card_path) if isinstance(play_card_path, Path) else None,
+            "rank_integrity_status": rank_contract.get("rank_integrity_status"),
         },
+        "rank_contract": rank_contract,
+        "display_order_contract": display_order_contract,
         "brain1_core": {
             "dominant_canonicals": _ordered_unique(overlay_summary.get("primary_canonicals") or [])[:12],
             "secondary_canonicals": _ordered_unique(overlay_summary.get("secondary_canonicals") or [])[:12],
@@ -531,11 +543,18 @@ def build_translation_sandbox_state_markdown(payload: Mapping[str, Any]) -> str:
     control_arm = payload.get("control_arm") if isinstance(payload.get("control_arm"), Mapping) else {}
     hypotheses = payload.get("sandbox_hypotheses") if isinstance(payload.get("sandbox_hypotheses"), Mapping) else {}
     scoreboard = brain2.get("scoreboard_row") if isinstance(brain2.get("scoreboard_row"), Mapping) else {}
+    display_contract = (
+        payload.get("display_order_contract")
+        if isinstance(payload.get("display_order_contract"), Mapping)
+        else {}
+    )
 
     lines = [
         f"# Translation Sandbox Seed — {metadata.get('state_key') or '?'}",
         "",
         "Purpose: capture near-final translator-learning surfaces without promoting active combination-forming logic.",
+        "",
+        "**RANK INTEGRITY STATUS: `INVALID_STATIC_ORDER`.** Candidate seeds remain available, but legacy board rank cannot activate posture, cap, route, or ordering.",
         "",
         "## Metadata",
         "",
@@ -561,8 +580,12 @@ def build_translation_sandbox_state_markdown(payload: Mapping[str, Any]) -> str:
         "",
         "## Brain 2 / Shadow DPL",
         "",
-        f"- Score rank: `{scoreboard.get('score_rank') or '-'}`",
-        f"- Priority score: `{scoreboard.get('priority_score') or '-'}`",
+        f"- Display order: `{display_contract.get('display_order') or '-'}`",
+        f"- Display order source: `{display_contract.get('display_order_source') or '-'}` (non-analytical)",
+        f"- Input order: `{scoreboard.get('input_order') or scoreboard.get('input_rank') or '-'}`",
+        f"- Legacy static rank: `{scoreboard.get('legacy_static_rank') or scoreboard.get('score_rank') or '-'}`",
+        f"- Legacy priority score: `{scoreboard.get('legacy_priority_score') or scoreboard.get('priority_score') or '-'}`",
+        f"- Analytical rank: `{scoreboard.get('analytical_rank') or '-'}`",
         f"- Role: `{scoreboard.get('role') or '-'}`",
         f"- Posture: `{decision.get('posture') or '-'}`",
         f"- Mode: `{decision.get('mode') or '-'}`",
@@ -656,7 +679,7 @@ def build_translation_sandbox_manifest_payload(
     state_receipts: Sequence[Mapping[str, Any]],
 ) -> Dict[str, Any]:
     return {
-        "schema_version": "translation_sandbox_manifest_v0",
+        "schema_version": "translation_sandbox_manifest_v1",
         "metadata": {
             "generated_at": _now_iso(),
             "results_date": results_date,
@@ -666,6 +689,12 @@ def build_translation_sandbox_manifest_payload(
             "overlay_json": _safe_rel(overlay_path),
             "scoreboard_json": _safe_rel(scoreboard_path),
             "shadow_decision_policy_json": _safe_rel(decision_policy_path),
+            "rank_integrity_status": RANK_INTEGRITY_INVALID_STATIC_ORDER,
+        },
+        "rank_contract": unavailable_rank_contract(),
+        "display_order_contract": {
+            "display_order_source": "INPUT_ROSTER_NON_ANALYTICAL",
+            "display_order_is_analytical": False,
         },
         "state_receipts": [dict(row) for row in state_receipts],
         "workflow_manifest": {
@@ -684,6 +713,8 @@ def build_translation_sandbox_manifest_markdown(payload: Mapping[str, Any]) -> s
         "",
         "Purpose: collect per-state translator-learning seed artifacts for the arena branch.",
         "",
+        "**RANK INTEGRITY STATUS: `INVALID_STATIC_ORDER`.** Rows use deterministic input order; legacy rank is diagnostic-only and does not order or activate seeds.",
+        "",
         "## Metadata",
         "",
         f"- Results date: `{metadata.get('results_date') or '-'}`",
@@ -692,11 +723,12 @@ def build_translation_sandbox_manifest_markdown(payload: Mapping[str, Any]) -> s
         f"- Overlay JSON: `{metadata.get('overlay_json') or '-'}`",
         f"- Scoreboard JSON: `{metadata.get('scoreboard_json') or '-'}`",
         f"- Shadow DPL JSON: `{metadata.get('shadow_decision_policy_json') or '-'}`",
+        "- Display order source: `INPUT_ROSTER_NON_ANALYTICAL` (navigation only)",
         "",
         "## State Seeds",
         "",
-        "| State | Rank | Role | Posture | Mode | Seed MD | Seed JSON |",
-        "|---|---:|---|---|---|---|---|",
+        "| Display Order | State | Legacy Rank | Analytical Rank | Role | Posture | Mode | Seed MD | Seed JSON |",
+        "|---:|---|---:|---:|---|---|---|---|---|",
     ]
     for row in state_rows:
         if not isinstance(row, Mapping):
@@ -705,8 +737,10 @@ def build_translation_sandbox_manifest_markdown(payload: Mapping[str, Any]) -> s
             "| "
             + " | ".join(
                 [
+                    str(row.get("display_order") or row.get("input_order") or "-"),
                     str(row.get("state_key") or "-"),
-                    str(row.get("score_rank") or "-"),
+                    str(row.get("legacy_static_rank") or row.get("score_rank") or "-"),
+                    str(row.get("analytical_rank") or "-"),
                     str(row.get("role") or "-"),
                     str(row.get("posture") or "-"),
                     str(row.get("mode") or "-"),
@@ -831,9 +865,23 @@ def run_translation_sandbox_seed(
         )
         scoreboard_row = scoreboard_rows.get(state_key) or {}
         decision_row = decision_rows.get(state_key) or {}
+        rank_contract = rank_contract_from_row(scoreboard_row)
         state_receipts.append(
             {
                 "state_key": state_key,
+                "input_order": scoreboard_row.get("input_order") or scoreboard_row.get("input_rank"),
+                **display_order_contract_from_row(scoreboard_row),
+                "legacy_static_rank": scoreboard_row.get("legacy_static_rank") or scoreboard_row.get("score_rank"),
+                "legacy_priority_score": scoreboard_row.get("legacy_priority_score") or scoreboard_row.get("priority_score"),
+                "analytical_rank": rank_contract.get("analytical_rank"),
+                "analytical_score": rank_contract.get("analytical_score"),
+                "analytical_rank_source": rank_contract.get("analytical_rank_source"),
+                "rank_integrity_status": rank_contract.get("rank_integrity_status"),
+                "rank_signal_available": rank_contract.get("rank_signal_available"),
+                "rank_signal_valid": rank_contract.get("rank_signal_valid"),
+                "rank_contribution": rank_contract.get("rank_contribution"),
+                "rank_contribution_mode": rank_contract.get("rank_contribution_mode"),
+                "rank_exclusion_reason": rank_contract.get("rank_exclusion_reason"),
                 "score_rank": scoreboard_row.get("score_rank"),
                 "priority_score": scoreboard_row.get("priority_score"),
                 "role": scoreboard_row.get("role"),

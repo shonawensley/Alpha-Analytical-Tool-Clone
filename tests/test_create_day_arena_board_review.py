@@ -207,5 +207,7 @@ def test_run_day_arena_board_review_orchestrates_arenas_and_bundle(tmp_path: Pat
     payload = json.loads(bundle_json.read_text(encoding="utf-8"))
     assert payload["workflow_manifest"]["brain1_runtime_entrypoint"].endswith("build_aggregated_analysis_arena.py")
     assert payload["workflow_manifest"]["shadow_decision_policy_builder"].endswith("build_shadow_decision_policy.py")
-    assert payload["board_verdict"]["top_primary_target"]
-    assert payload["shadow_decision_policy"]["top_play_state"]
+    assert payload["board_verdict"]["top_primary_target"] is None
+    assert payload["board_verdict"]["rank_evaluation"]["status"] == "NOT_EVALUABLE"
+    assert payload["shadow_decision_policy"]["top_play_state"] is None
+    assert payload["shadow_decision_policy"]["unresolved_states"]

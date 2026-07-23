@@ -190,7 +190,13 @@ def _parse_frontier_case(window_root: Path, row: Dict[str, str], hit_rows: Seque
         "date": str(row.get("date") or "").strip(),
         "state_key": str(row.get("state_key") or "").strip(),
         "winner": str(row.get("winner") or "").strip(),
-        "board_rank": _as_int(row.get("best_board_rank")),
+        "rank_evaluation_status": str(row.get("rank_evaluation_status") or "NOT_EVALUABLE"),
+        "rank_evaluation_reason": str(row.get("rank_evaluation_reason") or "INVALID_STATIC_ORDER"),
+        "board_rank": (
+            _as_int(row.get("best_board_rank"))
+            if str(row.get("rank_evaluation_status") or "") == "EVALUABLE"
+            else None
+        ),
         "frontier_signature_type": str(row.get("frontier_signature_type") or "").strip(),
         "signature_strength": str(row.get("signature_strength") or "").strip(),
         "literal_frontier_score": _as_float(row.get("literal_frontier_score")),

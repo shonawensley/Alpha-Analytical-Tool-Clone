@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 
 from scripts.tools.create_translation_sandbox_seed import (
+    build_translation_sandbox_state_payload,
     build_translation_sandbox_state_markdown,
     run_translation_sandbox_seed,
 )
@@ -179,6 +180,10 @@ def test_run_translation_sandbox_seed_collects_state_learning_surfaces(tmp_path:
 
     assert receipt["manifest_md"].endswith("__TRANSLATION_SANDBOX_SEED__analysis_arena_day_review.md")
     assert len(receipt["state_receipts"]) == 1
+    assert receipt["state_receipts"][0]["rank_signal_available"] is False
+    assert receipt["state_receipts"][0]["rank_signal_valid"] is False
+    assert receipt["state_receipts"][0]["rank_contribution"] == 0.0
+    assert receipt["state_receipts"][0]["display_order_is_analytical"] is False
 
     seed_json = analysis_dir / "translation_sandbox_seed__tool_only__arena_v0.json"
     seed_md = analysis_dir / "translation_sandbox_seed__tool_only__arena_v0.md"
@@ -187,7 +192,10 @@ def test_run_translation_sandbox_seed_collects_state_learning_surfaces(tmp_path:
 
     payload = json.loads(seed_json.read_text(encoding="utf-8"))
     assert payload["brain1_core"]["dominant_canonicals"][0] == "455"
-    assert payload["shadow_decision_policy"]["posture"] == "PLAY"
+    assert payload["shadow_decision_policy"]["posture"] == "UNRESOLVED"
+    assert payload["shadow_decision_policy"]["cap_class"] == "unavailable"
+    assert payload["shadow_decision_policy"]["translator_route"] == "none"
+    assert payload["rank_contract"]["rank_signal_valid"] is False
     assert payload["control_arm"]["candidate_universe"]["available"] is True
     assert payload["control_arm"]["play_card"]["available"] is True
     assert payload["control_arm"]["preserved_not_budgeted_canonicals_top"] == ["049"]
@@ -197,7 +205,46 @@ def test_run_translation_sandbox_seed_collects_state_learning_surfaces(tmp_path:
     assert "brain1.primary" in boxed_seed[0]["source_tags"]
     assert "control_arm.play_card" in boxed_seed[0]["source_tags"]
 
+    overlay_payload = json.loads(overlay_path.read_text(encoding="utf-8"))
+    candidate_path = state_dir / "candidate_universe__tool_only__arena_v0.json"
+    play_card_path = state_dir / "play_card__tool_only__arena_v0.json"
+    valid_rank_payload = build_translation_sandbox_state_payload(
+        results_date="2026-03-25",
+        board_name="Analysis Arena Day Review",
+        profile="tool_only",
+        experiment_tag="arena_v0",
+        sharepacks_root=sharepacks_root,
+        overlay_path=overlay_path,
+        scoreboard_path=scoreboard_path,
+        decision_policy_path=decision_path,
+        overlay_summary=overlay_payload["state_summaries"][0],
+        scoreboard_row={
+            "state_key": "NewJersey4",
+            "analytical_rank": 1,
+            "analytical_score": 34.0,
+            "analytical_rank_source": "test_valid_rank",
+            "rank_signal_available": True,
+            "rank_signal_valid": True,
+        },
+        decision_row={
+            "state_key": "NewJersey4",
+            "posture": "PLAY",
+            "mode": "boxed",
+            "cap_class": "medium",
+            "translator_route": "boxed",
+            "reason_codes": ["PLAY_STATE", "LAST_REMAINING"],
+        },
+        candidate_universe_payload=json.loads(candidate_path.read_text(encoding="utf-8")),
+        candidate_universe_path=candidate_path,
+        play_card_payload=json.loads(play_card_path.read_text(encoding="utf-8")),
+        play_card_path=play_card_path,
+    )
+    assert payload["control_arm"] == valid_rank_payload["control_arm"]
+    for seed_name in ("diagnostic_boxed_seed", "diagnostic_straight_seed", "diagnostic_vt_box_seed"):
+        assert payload["sandbox_hypotheses"][seed_name] == valid_rank_payload["sandbox_hypotheses"][seed_name]
+
     markdown = build_translation_sandbox_state_markdown(payload)
     assert "Translation Sandbox Seed" in markdown
+    assert "INVALID_STATIC_ORDER" in markdown
     assert "Diagnostic Boxed Seed" in markdown
     assert "Preserved-not-budgeted canonicals" in markdown

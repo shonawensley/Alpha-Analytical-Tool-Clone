@@ -286,7 +286,7 @@ def test_build_board_spillover_overlay_payload_and_markdown(tmp_path: Path) -> N
         top_items=6,
     )
 
-    assert payload["schema_version"] == "board_spillover_overlay_v0"
+    assert payload["schema_version"] == "board_spillover_overlay_v1"
     assert payload["board_context"]["midday_results_available"] is True
 
     state_summaries = {row["state_key"]: row for row in payload["state_summaries"]}
@@ -325,12 +325,15 @@ def test_build_board_spillover_overlay_payload_and_markdown(tmp_path: Path) -> N
     )
     scoreboard = payload["board_summary"]["board_scoreboard"]
     assert scoreboard
-    assert scoreboard[0]["state_key"] in {"NewJersey4", "NorthCarolina4"}
-    assert scoreboard[0]["priority_score"] >= scoreboard[-1]["priority_score"]
+    assert [row["input_order"] for row in scoreboard] == list(range(1, len(scoreboard) + 1))
+    assert all(row["analytical_rank"] is None for row in scoreboard)
+    assert all(row["rank_contribution"] == 0.0 for row in scoreboard)
+    assert sorted(row["legacy_static_rank"] for row in scoreboard) == list(range(1, len(scoreboard) + 1))
 
     md = build_board_spillover_overlay_markdown(payload)
     assert "Board Spillover Overlay" in md
-    assert "Board Scoreboard" in md
+    assert "Legacy Board Priority Receipt" in md
+    assert "INVALID_STATIC_ORDER" in md
     assert "Relationships" in md
     assert "NewJersey4" in md
     assert "NorthCarolina4" in md

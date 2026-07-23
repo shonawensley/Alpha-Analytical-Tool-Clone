@@ -36,14 +36,15 @@ Capture@K, top-ranked-state, and rank-performance conclusions are `NOT_EVALUABLE
 - Window doubles inventory: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/VALIDATION/2026-03-09_to_2026-03-23__DOUBLES_MIRROR_DOUBLES__INVENTORY.md` / `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/VALIDATION/2026-03-09_to_2026-03-23__DOUBLES_MIRROR_DOUBLES__INVENTORY.csv`
 
 ## Quick Auto-Captured Anchors
-- Top scoreboard rows: `#1 Connecticut4` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-rich` canonicals=`168, 189, 006`; `#2 Delaware4` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-strong` canonicals=`006, 129, 259`; `#3 Florida4` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-strong` canonicals=`224, 778, 889`; `#4 Indiana4` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-rich` canonicals=`011, 225, 255`; `#5 Michigan4` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-support` canonicals=`118, 778, 188`
-- Board verdict top_primary_target: `Connecticut4`
-- Board verdict secondary_target: `Delaware4`
-- Board verdict best_clean_host: `Connecticut4`
+- Board evidence rows (input order; legacy rank diagnostic-only): `input=1 Connecticut4` legacy_rank=`1` analytical_rank=`-` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-rich` canonicals=`168, 189, 006`; `input=2 Delaware4` legacy_rank=`2` analytical_rank=`-` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-strong` canonicals=`006, 129, 259`; `input=3 Florida4` legacy_rank=`3` analytical_rank=`-` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-strong` canonicals=`224, 778, 889`; `input=4 Indiana4` legacy_rank=`4` analytical_rank=`-` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-rich` canonicals=`011, 225, 255`; `input=5 Michigan4` legacy_rank=`5` analytical_rank=`-` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-support` canonicals=`118, 778, 188`
+- Board verdict top_primary_target: `-`
+- Board verdict secondary_target: `-`
+- Board verdict best_clean_host: `-`
 - Board verdict highest_context_support_state: `NorthCarolina4`
 - Shadow DPL play states: _none_
-- Shadow DPL watch states: `Connecticut4`, `Delaware4`, `Florida4`, `Indiana4`, `Michigan4`, `NewJersey4`, `NewYork4`, `NorthCarolina4`, `Ohio4`, `OntarioCanada4`, `Pennsylvania4`, `PuertoRico4`, `SouthCarolina4`, `Virginia4`
-- Daily doubles / mirror doubles detected: ``Delaware4` `Midday` winner=`884` type=`double` rank=`2` mirror_pairs=`-``, ``Florida4` `Evening` winner=`941` type=`mirror_double` rank=`3` mirror_pairs=`4/9``, ``Florida4` `Midday` winner=`383` type=`double` rank=`3` mirror_pairs=`3/8``, ``Michigan4` `Evening` winner=`116` type=`double` rank=`5` mirror_pairs=`1/6``, ``Michigan4` `Midday` winner=`373` type=`double` rank=`5` mirror_pairs=`-``, ``NewJersey4` `Midday` winner=`617` type=`mirror_double` rank=`6` mirror_pairs=`1/6``, ``NewYork4` `Midday` winner=`900` type=`double` rank=`7` mirror_pairs=`-``, ``NorthCarolina4` `Evening` winner=`000` type=`triple` rank=`8` mirror_pairs=`-``, ``NorthCarolina4` `Midday` winner=`855` type=`double` rank=`8` mirror_pairs=`-``, ``Ohio4` `Evening` winner=`664` type=`double` rank=`9` mirror_pairs=`-``, ``Ohio4` `Midday` winner=`848` type=`double` rank=`9` mirror_pairs=`-``, ``OntarioCanada4` `Evening` winner=`559` type=`double` rank=`10` mirror_pairs=`-``, ``Pennsylvania4` `Evening` winner=`966` type=`double` rank=`11` mirror_pairs=`-``, ``Pennsylvania4` `Midday` winner=`040` type=`double` rank=`11` mirror_pairs=`-``, ``PuertoRico4` `Evening` winner=`419` type=`mirror_double` rank=`12` mirror_pairs=`4/9``, ``PuertoRico4` `Midday` winner=`887` type=`double` rank=`12` mirror_pairs=`-``, ``SouthCarolina4` `Evening` winner=`505` type=`double` rank=`13` mirror_pairs=`0/5``, ``SouthCarolina4` `Midday` winner=`455` type=`double` rank=`13` mirror_pairs=`-``, ``Virginia4` `Evening` winner=`188` type=`double` rank=`14` mirror_pairs=`-``
+- Shadow DPL watch states: _none_
+- Shadow DPL unresolved states: `Connecticut4`, `Delaware4`, `Florida4`, `Indiana4`, `Michigan4`, `NewJersey4`, `NewYork4`, `NorthCarolina4`, `Ohio4`, `OntarioCanada4`, `Pennsylvania4`, `PuertoRico4`, `SouthCarolina4`, `Virginia4`
+- Daily doubles / mirror doubles detected: ``Delaware4` `Midday` winner=`884` type=`double` analytical_rank=`-` mirror_pairs=`-``, ``Florida4` `Evening` winner=`941` type=`mirror_double` analytical_rank=`-` mirror_pairs=`4/9``, ``Florida4` `Midday` winner=`383` type=`double` analytical_rank=`-` mirror_pairs=`3/8``, ``Michigan4` `Evening` winner=`116` type=`double` analytical_rank=`-` mirror_pairs=`1/6``, ``Michigan4` `Midday` winner=`373` type=`double` analytical_rank=`-` mirror_pairs=`-``, ``NewJersey4` `Midday` winner=`617` type=`mirror_double` analytical_rank=`-` mirror_pairs=`1/6``, ``NewYork4` `Midday` winner=`900` type=`double` analytical_rank=`-` mirror_pairs=`-``, ``NorthCarolina4` `Evening` winner=`000` type=`triple` analytical_rank=`-` mirror_pairs=`-``, ``NorthCarolina4` `Midday` winner=`855` type=`double` analytical_rank=`-` mirror_pairs=`-``, ``Ohio4` `Evening` winner=`664` type=`double` analytical_rank=`-` mirror_pairs=`-``, ``Ohio4` `Midday` winner=`848` type=`double` analytical_rank=`-` mirror_pairs=`-``, ``OntarioCanada4` `Evening` winner=`559` type=`double` analytical_rank=`-` mirror_pairs=`-``, ``Pennsylvania4` `Evening` winner=`966` type=`double` analytical_rank=`-` mirror_pairs=`-``, ``Pennsylvania4` `Midday` winner=`040` type=`double` analytical_rank=`-` mirror_pairs=`-``, ``PuertoRico4` `Evening` winner=`419` type=`mirror_double` analytical_rank=`-` mirror_pairs=`4/9``, ``PuertoRico4` `Midday` winner=`887` type=`double` analytical_rank=`-` mirror_pairs=`-``, ``SouthCarolina4` `Evening` winner=`505` type=`double` analytical_rank=`-` mirror_pairs=`0/5``, ``SouthCarolina4` `Midday` winner=`455` type=`double` analytical_rank=`-` mirror_pairs=`-``, ``Virginia4` `Evening` winner=`188` type=`double` analytical_rank=`-` mirror_pairs=`-``
 
 ---
 
@@ -63,8 +64,8 @@ Analyst conclusion:
 ## Part B — Board Outcome Map
 
 Auto-captured anchors:
-- top scoreboard anchors: `#1 Connecticut4` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-rich` canonicals=`168, 189, 006`; `#2 Delaware4` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-strong` canonicals=`006, 129, 259`; `#3 Florida4` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-strong` canonicals=`224, 778, 889`
-- daily doubles / mirror doubles on the day: ``Delaware4` `Midday` winner=`884` type=`double` rank=`2` mirror_pairs=`-``, ``Florida4` `Evening` winner=`941` type=`mirror_double` rank=`3` mirror_pairs=`4/9``, ``Florida4` `Midday` winner=`383` type=`double` rank=`3` mirror_pairs=`3/8``, ``Michigan4` `Evening` winner=`116` type=`double` rank=`5` mirror_pairs=`1/6``, ``Michigan4` `Midday` winner=`373` type=`double` rank=`5` mirror_pairs=`-``, ``NewJersey4` `Midday` winner=`617` type=`mirror_double` rank=`6` mirror_pairs=`1/6``, ``NewYork4` `Midday` winner=`900` type=`double` rank=`7` mirror_pairs=`-``, ``NorthCarolina4` `Evening` winner=`000` type=`triple` rank=`8` mirror_pairs=`-``, ``NorthCarolina4` `Midday` winner=`855` type=`double` rank=`8` mirror_pairs=`-``, ``Ohio4` `Evening` winner=`664` type=`double` rank=`9` mirror_pairs=`-``, ``Ohio4` `Midday` winner=`848` type=`double` rank=`9` mirror_pairs=`-``, ``OntarioCanada4` `Evening` winner=`559` type=`double` rank=`10` mirror_pairs=`-``, ``Pennsylvania4` `Evening` winner=`966` type=`double` rank=`11` mirror_pairs=`-``, ``Pennsylvania4` `Midday` winner=`040` type=`double` rank=`11` mirror_pairs=`-``, ``PuertoRico4` `Evening` winner=`419` type=`mirror_double` rank=`12` mirror_pairs=`4/9``, ``PuertoRico4` `Midday` winner=`887` type=`double` rank=`12` mirror_pairs=`-``, ``SouthCarolina4` `Evening` winner=`505` type=`double` rank=`13` mirror_pairs=`0/5``, ``SouthCarolina4` `Midday` winner=`455` type=`double` rank=`13` mirror_pairs=`-``, ``Virginia4` `Evening` winner=`188` type=`double` rank=`14` mirror_pairs=`-``
+- board evidence anchors (input order): `input=1 Connecticut4` legacy_rank=`1` analytical_rank=`-` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-rich` canonicals=`168, 189, 006`; `input=2 Delaware4` legacy_rank=`2` analytical_rank=`-` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-strong` canonicals=`006, 129, 259`; `input=3 Florida4` legacy_rank=`3` analytical_rank=`-` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-strong` canonicals=`224, 778, 889`
+- daily doubles / mirror doubles on the day: ``Delaware4` `Midday` winner=`884` type=`double` analytical_rank=`-` mirror_pairs=`-``, ``Florida4` `Evening` winner=`941` type=`mirror_double` analytical_rank=`-` mirror_pairs=`4/9``, ``Florida4` `Midday` winner=`383` type=`double` analytical_rank=`-` mirror_pairs=`3/8``, ``Michigan4` `Evening` winner=`116` type=`double` analytical_rank=`-` mirror_pairs=`1/6``, ``Michigan4` `Midday` winner=`373` type=`double` analytical_rank=`-` mirror_pairs=`-``, ``NewJersey4` `Midday` winner=`617` type=`mirror_double` analytical_rank=`-` mirror_pairs=`1/6``, ``NewYork4` `Midday` winner=`900` type=`double` analytical_rank=`-` mirror_pairs=`-``, ``NorthCarolina4` `Evening` winner=`000` type=`triple` analytical_rank=`-` mirror_pairs=`-``, ``NorthCarolina4` `Midday` winner=`855` type=`double` analytical_rank=`-` mirror_pairs=`-``, ``Ohio4` `Evening` winner=`664` type=`double` analytical_rank=`-` mirror_pairs=`-``, ``Ohio4` `Midday` winner=`848` type=`double` analytical_rank=`-` mirror_pairs=`-``, ``OntarioCanada4` `Evening` winner=`559` type=`double` analytical_rank=`-` mirror_pairs=`-``, ``Pennsylvania4` `Evening` winner=`966` type=`double` analytical_rank=`-` mirror_pairs=`-``, ``Pennsylvania4` `Midday` winner=`040` type=`double` analytical_rank=`-` mirror_pairs=`-``, ``PuertoRico4` `Evening` winner=`419` type=`mirror_double` analytical_rank=`-` mirror_pairs=`4/9``, ``PuertoRico4` `Midday` winner=`887` type=`double` analytical_rank=`-` mirror_pairs=`-``, ``SouthCarolina4` `Evening` winner=`505` type=`double` analytical_rank=`-` mirror_pairs=`0/5``, ``SouthCarolina4` `Midday` winner=`455` type=`double` analytical_rank=`-` mirror_pairs=`-``, ``Virginia4` `Evening` winner=`188` type=`double` analytical_rank=`-` mirror_pairs=`-``
 - direct cross-state receipts surfaced by board verdict: _none_
 
 Analyst conclusion:
@@ -74,21 +75,22 @@ Analyst conclusion:
 - day-level structural class: `...`
 - most important truth-side board insight: `...`
 
-## Part C — Scoreboard And Ranking Evaluation
+## Part C — Board Evidence And Rank Integrity Evaluation
 
 Auto-captured anchors:
-- top scoreboard rows that mattered: `#1 Connecticut4` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-rich` canonicals=`168, 189, 006`; `#2 Delaware4` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-strong` canonicals=`006, 129, 259`; `#3 Florida4` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-strong` canonicals=`224, 778, 889`; `#4 Indiana4` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-rich` canonicals=`011, 225, 255`; `#5 Michigan4` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-support` canonicals=`118, 778, 188`
-- top_primary_target=`Connecticut4` secondary_target=`Delaware4`
-- best_clean_host=`Connecticut4` highest_context_support_state=`NorthCarolina4`
+- rank evaluation status: `NOT_EVALUABLE` reason=`INVALID_STATIC_ORDER`
+- board evidence rows (not analytically ranked): `input=1 Connecticut4` legacy_rank=`1` analytical_rank=`-` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-rich` canonicals=`168, 189, 006`; `input=2 Delaware4` legacy_rank=`2` analytical_rank=`-` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-strong` canonicals=`006, 129, 259`; `input=3 Florida4` legacy_rank=`3` analytical_rank=`-` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-strong` canonicals=`224, 778, 889`; `input=4 Indiana4` legacy_rank=`4` analytical_rank=`-` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-rich` canonicals=`011, 225, 255`; `input=5 Michigan4` legacy_rank=`5` analytical_rank=`-` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-support` canonicals=`118, 778, 188`
+- top_primary_target=`-` secondary_target=`-`
+- best_clean_host=`-` highest_context_support_state=`NorthCarolina4`
 - tight_core_states=-
 - watch_only_states=-
-- small_shoulder_states=`Connecticut4`, `Delaware4`, `Florida4`
+- small_shoulder_states=`Connecticut4`, `Delaware4`, `Florida4`, `Indiana4`, `Michigan4`, `NewJersey4`, `NewYork4`, `NorthCarolina4`, `Ohio4`, `OntarioCanada4`, `Pennsylvania4`, `PuertoRico4`, `SouthCarolina4`, `Virginia4`
 
 Analyst conclusion:
-- highest-converting actual state rank(s): `...`
-- bucket quality notes: `...`
-- did the scoreboard ranking help or distort the day?: `...`
-- most important scoreboard lesson: `...`
+- analytical rank conclusion: `NOT_EVALUABLE — INVALID_STATIC_ORDER`
+- rank-independent bucket and structural-evidence notes: `...`
+- legacy ordering distortion notes (diagnostic only): `...`
+- requirements for a future evidence-derived shadow ranker: `...`
 
 ## Part D — Shared Complexes, Carryover, And Spillover
 
@@ -150,10 +152,10 @@ Analyst conclusion:
 - did BA function mainly as host indicator / echo amplifier / shortlist helper / noise / mixed?: `...`
 - most important BA lesson: `...`
 
-## Part H — Due Doubles Ranked-State Evaluation
+## Part H — Due Doubles Mechanism-Specific State Evaluation
 
 Auto-captured anchors:
-- ranked due states reviewed (DS>=3): `Delaware4` DS=`7`; `Pennsylvania4` DS=`4`; `Virginia4` DS=`4`; `Ohio4` DS=`3`
+- due-mechanism states reviewed by Draws Since Double (DS>=3): `Delaware4` DS=`7`; `Pennsylvania4` DS=`4`; `Virginia4` DS=`4`; `Ohio4` DS=`3`
 - top due states that converted in-family: _none / truth receipt unavailable_
 - due doubles source: `sharepacks/_predictive/2026-03-09/control_center/due_doubles.csv`
 
@@ -162,12 +164,12 @@ Analyst conclusion:
 - threshold states (3 draws missing) that converted: `...`
 - important due families / examples that converted: `...`
 - conversion class notes: `...`
-- most important due-doubles ranking lesson: `...`
+- most important due-doubles mechanism-order lesson: `...`
 
 ## Part I — All Daily Doubles And Mirror Doubles Evidence Audit
 
 Auto-captured anchors:
-- daily doubles / mirror doubles reviewed: `Delaware4` `Midday` winner=`884` type=`double` rank=`2` mirror_pairs=`-`; `Florida4` `Evening` winner=`941` type=`mirror_double` rank=`3` mirror_pairs=`4/9`; `Florida4` `Midday` winner=`383` type=`double` rank=`3` mirror_pairs=`3/8`; `Michigan4` `Evening` winner=`116` type=`double` rank=`5` mirror_pairs=`1/6`; `Michigan4` `Midday` winner=`373` type=`double` rank=`5` mirror_pairs=`-`; `NewJersey4` `Midday` winner=`617` type=`mirror_double` rank=`6` mirror_pairs=`1/6`; `NewYork4` `Midday` winner=`900` type=`double` rank=`7` mirror_pairs=`-`; `NorthCarolina4` `Evening` winner=`000` type=`triple` rank=`8` mirror_pairs=`-`; `NorthCarolina4` `Midday` winner=`855` type=`double` rank=`8` mirror_pairs=`-`; `Ohio4` `Evening` winner=`664` type=`double` rank=`9` mirror_pairs=`-`; `Ohio4` `Midday` winner=`848` type=`double` rank=`9` mirror_pairs=`-`; `OntarioCanada4` `Evening` winner=`559` type=`double` rank=`10` mirror_pairs=`-`; `Pennsylvania4` `Evening` winner=`966` type=`double` rank=`11` mirror_pairs=`-`; `Pennsylvania4` `Midday` winner=`040` type=`double` rank=`11` mirror_pairs=`-`; `PuertoRico4` `Evening` winner=`419` type=`mirror_double` rank=`12` mirror_pairs=`4/9`; `PuertoRico4` `Midday` winner=`887` type=`double` rank=`12` mirror_pairs=`-`; `SouthCarolina4` `Evening` winner=`505` type=`double` rank=`13` mirror_pairs=`0/5`; `SouthCarolina4` `Midday` winner=`455` type=`double` rank=`13` mirror_pairs=`-`; `Virginia4` `Evening` winner=`188` type=`double` rank=`14` mirror_pairs=`-`
+- daily doubles / mirror doubles reviewed: `Delaware4` `Midday` winner=`884` type=`double` analytical_rank=`-` mirror_pairs=`-`; `Florida4` `Evening` winner=`941` type=`mirror_double` analytical_rank=`-` mirror_pairs=`4/9`; `Florida4` `Midday` winner=`383` type=`double` analytical_rank=`-` mirror_pairs=`3/8`; `Michigan4` `Evening` winner=`116` type=`double` analytical_rank=`-` mirror_pairs=`1/6`; `Michigan4` `Midday` winner=`373` type=`double` analytical_rank=`-` mirror_pairs=`-`; `NewJersey4` `Midday` winner=`617` type=`mirror_double` analytical_rank=`-` mirror_pairs=`1/6`; `NewYork4` `Midday` winner=`900` type=`double` analytical_rank=`-` mirror_pairs=`-`; `NorthCarolina4` `Evening` winner=`000` type=`triple` analytical_rank=`-` mirror_pairs=`-`; `NorthCarolina4` `Midday` winner=`855` type=`double` analytical_rank=`-` mirror_pairs=`-`; `Ohio4` `Evening` winner=`664` type=`double` analytical_rank=`-` mirror_pairs=`-`; `Ohio4` `Midday` winner=`848` type=`double` analytical_rank=`-` mirror_pairs=`-`; `OntarioCanada4` `Evening` winner=`559` type=`double` analytical_rank=`-` mirror_pairs=`-`; `Pennsylvania4` `Evening` winner=`966` type=`double` analytical_rank=`-` mirror_pairs=`-`; `Pennsylvania4` `Midday` winner=`040` type=`double` analytical_rank=`-` mirror_pairs=`-`; `PuertoRico4` `Evening` winner=`419` type=`mirror_double` analytical_rank=`-` mirror_pairs=`4/9`; `PuertoRico4` `Midday` winner=`887` type=`double` analytical_rank=`-` mirror_pairs=`-`; `SouthCarolina4` `Evening` winner=`505` type=`double` analytical_rank=`-` mirror_pairs=`0/5`; `SouthCarolina4` `Midday` winner=`455` type=`double` analytical_rank=`-` mirror_pairs=`-`; `Virginia4` `Evening` winner=`188` type=`double` analytical_rank=`-` mirror_pairs=`-`
 - support sources: due-doubles=`sharepacks/_predictive/2026-03-09/control_center/due_doubles.csv` BA=`sharepacks/_predictive/2026-03-09/control_center/blackapple_alerts.csv` alerts=`sharepacks/_predictive/2026-03-09/control_center/profit_alerts.csv`
 - window doubles inventory: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/VALIDATION/2026-03-09_to_2026-03-23__DOUBLES_MIRROR_DOUBLES__INVENTORY.md` / `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/VALIDATION/2026-03-09_to_2026-03-23__DOUBLES_MIRROR_DOUBLES__INVENTORY.csv`
 
@@ -180,17 +182,17 @@ Analyst conclusion:
 
 Auto-captured anchors:
 - play states: _none_
-- watch states: `Connecticut4`, `Delaware4`, `Florida4`, `Indiana4`, `Michigan4`, `NewJersey4`, `NewYork4`, `NorthCarolina4`, `Ohio4`, `OntarioCanada4`, `Pennsylvania4`, `PuertoRico4`, `SouthCarolina4`, `Virginia4`
+- watch states: _none_
 - skip states: _none_
+- unresolved states: `Connecticut4`, `Delaware4`, `Florida4`, `Indiana4`, `Michigan4`, `NewJersey4`, `NewYork4`, `NorthCarolina4`, `Ohio4`, `OntarioCanada4`, `Pennsylvania4`, `PuertoRico4`, `SouthCarolina4`, `Virginia4`
 - top useful reason codes: `HOST_STATE` x14; `DOUBLE_HEAVY` x14; `CTX_REINFORCED` x14; `VTRAC_ALIGNED` x14; `SURVIVOR_PRESSURE` x14; `SURVIVOR_PROGRESSION` x14; `HIDDEN_TERMINAL_SUPPORT` x14; `PROFIT_ALERT` x14
-- top_play_state=`-` top_watch_state=`Connecticut4`
+- top_play_state=`-` top_watch_state=`-`
 
 Analyst conclusion:
-- watch states that should maybe have been play: `...`
-- play states that were overpromoted: `...`
-- mode / cap quality: `...`
-- most important misleading reason codes: `...`
-- most important DPL lesson: `...`
+- rank-dependent DPL conclusion: `NOT_EVALUABLE — decisions remain UNRESOLVED`
+- rank-independent structural modes worth preserving: `...`
+- independent hard blockers (for example locally spent) observed: `...`
+- most important DPL quarantine lesson: `...`
 
 ## Part K — Translation Sandbox / Combination Learning Capture
 

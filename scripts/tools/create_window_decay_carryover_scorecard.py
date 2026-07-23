@@ -34,6 +34,14 @@ from scripts.tools.analysis_arena_window_utils import (
     winner_events_for_state,
     winners_for_date,
 )
+from scripts.tools.brain2_rank_contract import (
+    RANK_INTEGRITY_INVALID_STATIC_ORDER,
+    analytical_rank,
+    analytical_score,
+    display_order_contract_from_row,
+    rank_contract_from_row,
+    rank_evaluation_status,
+)
 
 
 DEFAULT_RESULTS_ROOT = REPO_ROOT / "data" / "results"
@@ -301,6 +309,9 @@ def _snapshot_row(
     seed: Dict[str, Any],
     outcomes: Dict[str, Any],
 ) -> Dict[str, Any]:
+    rank_contract = rank_contract_from_row(scoreboard_row)
+    display_contract = display_order_contract_from_row(scoreboard_row)
+    rank_valid = bool(rank_contract.get("rank_signal_valid"))
     seed_lists = _seed_signal_lists(seed)
     board_box_values = _ordered_unique(str(value).strip() for value in (scoreboard_row.get("top_canonicals") or []) if str(value).strip())
     board_vt_values = _ordered_unique(str(value).strip() for value in (scoreboard_row.get("top_vtrac_indices") or []) if str(value).strip())
@@ -311,14 +322,30 @@ def _snapshot_row(
     row: Dict[str, Any] = {
         "snapshot_date": snapshot_date,
         "state_key": state_key,
-        "score_rank": scoreboard_row.get("score_rank", ""),
-        "priority_score": scoreboard_row.get("priority_score", ""),
+        **display_contract,
+        "input_order": scoreboard_row.get("input_order") or scoreboard_row.get("input_rank") or "",
+        "legacy_static_rank": scoreboard_row.get("legacy_static_rank") or scoreboard_row.get("score_rank") or "",
+        "legacy_priority_score": scoreboard_row.get("legacy_priority_score") or scoreboard_row.get("priority_score") or "",
+        "score_rank": analytical_rank(scoreboard_row) or "",
+        "priority_score": analytical_score(scoreboard_row) if rank_valid else "",
+        "analytical_rank": rank_contract.get("analytical_rank") or "",
+        "analytical_score": rank_contract.get("analytical_score") if rank_valid else "",
+        "analytical_rank_source": rank_contract.get("analytical_rank_source") or "",
+        "rank_signal_valid": rank_valid,
+        "rank_integrity_status": rank_contract.get("rank_integrity_status"),
+        "rank_exclusion_reason": rank_contract.get("rank_exclusion_reason"),
         "role": scoreboard_row.get("role", ""),
         "targeting_bucket": scoreboard_row.get("targeting_bucket", ""),
         "tracker_posture": scoreboard_row.get("tracker_posture", ""),
-        "top_primary_target": board_verdict.get("top_primary_target") == state_key,
-        "secondary_target": board_verdict.get("secondary_target") == state_key,
-        "best_clean_host": board_verdict.get("best_clean_host") == state_key,
+        "top_primary_target": (
+            board_verdict.get("top_primary_target") == state_key if rank_valid else ""
+        ),
+        "secondary_target": (
+            board_verdict.get("secondary_target") == state_key if rank_valid else ""
+        ),
+        "best_clean_host": (
+            board_verdict.get("best_clean_host") == state_key if rank_valid else ""
+        ),
         "highest_context_support_state": board_verdict.get("highest_context_support_state") == state_key,
         "profit_alert_hint_present": _hint_present(scoreboard_row.get("profit_alert_hint")),
         "compound_event_hint_present": _hint_present(scoreboard_row.get("compound_event_hint")),
@@ -408,8 +435,6 @@ def _top_examples(rows: Iterable[Dict[str, Any]], *, profile: str, limit: int = 
     matched = [row for row in rows if row.get("arena_any_signal_profile") == profile]
     matched.sort(
         key=lambda row: (
-            _safe_int(row.get("score_rank"), default=999),
-            -float(row.get("priority_score") or 0.0),
             str(row.get("snapshot_date") or ""),
             str(row.get("state_key") or ""),
         )
@@ -420,8 +445,10 @@ def _top_examples(rows: Iterable[Dict[str, Any]], *, profile: str, limit: int = 
             {
                 "snapshot_date": row.get("snapshot_date", ""),
                 "state": row.get("state_key", ""),
-                "score_rank": _safe_int(row.get("score_rank"), default=999),
-                "priority_score": float(row.get("priority_score") or 0.0),
+                "display_order": row.get("display_order", ""),
+                "display_order_source": row.get("display_order_source", ""),
+                "analytical_rank": row.get("analytical_rank", ""),
+                "legacy_static_rank": row.get("legacy_static_rank", ""),
                 "targeting_bucket": row.get("targeting_bucket", ""),
                 "tracker_posture": row.get("tracker_posture", ""),
                 "arena_any_signal_event": row.get("arena_any_signal_event", ""),
@@ -464,6 +491,23 @@ def _panel_for_cohort(rows: Sequence[Dict[str, Any]], *, name: str, label: str, 
         "horizon_rate": (horizon / len(scoped)) if scoped else 0.0,
         "incremental_decay_lift": horizon - same_day,
         "profile_counts": {name_: profiles.get(name_, 0) for name_ in PROFILE_ORDER},
+    }
+
+
+def _not_evaluable_cohort(*, name: str, label: str) -> Dict[str, Any]:
+    return {
+        "cohort": name,
+        "label": label,
+        "status": "NOT_EVALUABLE",
+        "evaluable": False,
+        "reason": RANK_INTEGRITY_INVALID_STATIC_ORDER,
+        "state_days": None,
+        "same_day_resolved": None,
+        "same_day_rate": None,
+        "horizon_resolved": None,
+        "horizon_rate": None,
+        "incremental_decay_lift": None,
+        "profile_counts": {name_: None for name_ in PROFILE_ORDER},
     }
 
 
@@ -513,10 +557,45 @@ def build_payload(window_root: Path, *, results_root: Path, decay_upload_days_to
 
     metric_families = [_panel_for_metric(rows, spec=spec) for spec in METRIC_SPECS]
     overall_panel = _panel_for_cohort(rows, name="arena_any_signal", label="Arena any signal", selector=lambda row: bool(row.get("arena_any_signal_active")))
+    rank_evaluation = rank_evaluation_status(
+        [
+            {
+                "analytical_rank": row.get("analytical_rank"),
+                "analytical_score": row.get("analytical_score"),
+                "analytical_rank_source": row.get("analytical_rank_source") or None,
+                "rank_signal_available": row.get("rank_signal_valid") is True,
+                "rank_signal_valid": row.get("rank_signal_valid") is True,
+                "rank_integrity_status": row.get("rank_integrity_status"),
+            }
+            for row in rows
+        ]
+    )
+    if rank_evaluation["evaluable"]:
+        top_primary_panel = _panel_for_cohort(
+            rows,
+            name="top_primary_target",
+            label="Top primary target",
+            selector=lambda row: bool(row.get("top_primary_target")),
+        )
+        top3_panel = _panel_for_cohort(
+            rows,
+            name="top3_ranked",
+            label="Top-3 ranked states",
+            selector=lambda row: _safe_int(row.get("analytical_rank"), default=999) <= 3,
+        )
+    else:
+        top_primary_panel = _not_evaluable_cohort(
+            name="top_primary_target",
+            label="Top primary target",
+        )
+        top3_panel = _not_evaluable_cohort(
+            name="top3_ranked",
+            label="Top-3 ranked states",
+        )
     cohort_panels = [
         overall_panel,
-        _panel_for_cohort(rows, name="top_primary_target", label="Top primary target", selector=lambda row: bool(row.get("top_primary_target"))),
-        _panel_for_cohort(rows, name="top3_ranked", label="Top-3 ranked states", selector=lambda row: _safe_int(row.get("score_rank"), default=999) <= 3),
+        top_primary_panel,
+        top3_panel,
         _panel_for_cohort(rows, name="tracker_hint_present", label="Any tracker hint present", selector=lambda row: bool(row.get("tracker_hint_any"))),
         _panel_for_cohort(rows, name="profit_alert_hint_present", label="Profit-alert hint present", selector=lambda row: bool(row.get("profit_alert_hint_present"))),
         _panel_for_cohort(rows, name="due_double_hint_present", label="Due-double hint present", selector=lambda row: bool(row.get("due_double_hint_present"))),
@@ -530,7 +609,7 @@ def build_payload(window_root: Path, *, results_root: Path, decay_upload_days_to
         interpretation.append(
             f"Arena-any-signal state-days gained `{overall_panel['incremental_decay_lift']}` extra resolutions beyond same-day inside the current decay horizon."
         )
-    if any(panel["profile_counts"].get("same_day_carryforward", 0) > 0 for panel in cohort_panels):
+    if any(int(panel["profile_counts"].get("same_day_carryforward") or 0) > 0 for panel in cohort_panels):
         interpretation.append("Same-day carryforward remains distinct from future-day decay and should not be flattened into one generic later-hit bucket.")
 
     return {
@@ -548,6 +627,7 @@ def build_payload(window_root: Path, *, results_root: Path, decay_upload_days_to
             "same_day_included": True,
             "resolution_policy": "Upload-day horizon is primary; draw-based offsets are companion accounting only.",
             "results_tail_rule": "A 5 total upload-day horizon requires results through snapshot day + 4 days.",
+            "rank_evaluation": rank_evaluation,
         },
         "summary": {
             "state_day_snapshots": len(rows),
@@ -641,6 +721,12 @@ def _render_markdown(payload: Dict[str, Any], *, csv_path: Path) -> str:
         "|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for panel in cohort_panels:
+        if panel.get("evaluable") is False:
+            lines.append(
+                f"| {panel.get('label', '')} | NOT_EVALUABLE | NOT_EVALUABLE | "
+                f"NOT_EVALUABLE | NOT_EVALUABLE | - | - | - | - | - |"
+            )
+            continue
         profiles = panel.get("profile_counts") or {}
         lines.append(
             "| "
@@ -674,7 +760,9 @@ def _render_markdown(payload: Dict[str, Any], *, csv_path: Path) -> str:
             continue
         for row in rows:
             lines.append(
-                f"- `{row.get('snapshot_date', '')}` `{row.get('state', '')}` rank=`{row.get('score_rank', '')}` "
+                f"- `{row.get('snapshot_date', '')}` `{row.get('state', '')}` "
+                f"display=`{row.get('display_order', '')}` analytical_rank=`{row.get('analytical_rank', '') or 'unavailable'}` "
+                f"legacy_rank=`{row.get('legacy_static_rank', '') or '-'}` "
                 f"event=`{row.get('arena_any_signal_event', '') or '-'}` metrics=`{', '.join(row.get('active_metric_names') or []) or '-'}`"
             )
         lines.append("")

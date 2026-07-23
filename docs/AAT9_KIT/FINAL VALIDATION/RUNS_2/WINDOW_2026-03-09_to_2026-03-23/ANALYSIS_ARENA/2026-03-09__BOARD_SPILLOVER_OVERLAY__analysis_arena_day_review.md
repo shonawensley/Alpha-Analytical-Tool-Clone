@@ -2,9 +2,12 @@
 
 Purpose: compare strong states at the board level, surface shared families/lanes, and classify simple spillover and spent-vs-unspent conditions.
 
+**RANK INTEGRITY STATUS: `INVALID_STATIC_ORDER`.** Legacy rank/priority fields are diagnostic receipts only; analytical state rank is unavailable and contributes `0.0`.
+**DISPLAY ORDER:** `INPUT_ROSTER_NON_ANALYTICAL`; navigation only, with no analytical meaning.
+
 ## Summary
 
-- schema_version: `board_spillover_overlay_v0`
+- schema_version: `board_spillover_overlay_v1`
 - profile: `tool_only`
 - experiment_tag: `arena_v0`
 - midday_results_available: `False`
@@ -12,7 +15,7 @@ Purpose: compare strong states at the board level, surface shared families/lanes
 
 ## State Summaries
 
-| Rank | State | Top Canonicals | Top VTRAC | Midday Status | Evening Bias | Role Hint | BA Standing |
+| Input Order | State | Top Canonicals | Top VTRAC | Midday Status | Evening Bias | Role Hint | BA Standing |
 |---:|---|---|---|---|---|---|---|
 | 1 | Connecticut4 | 168, 189, 006, 019, 668, 199, 018 | 18, 9, 25, 23, 24, 15, 8, 21 | - | - | shared_host | Combined:ALERT/3, Evening:ALERT/3, Midday:OFF/1 |
 | 2 | Delaware4 | 006, 129, 259, 478, 244, 249, 599, 788 | 12, 31, 2, 33, 22, 15, 14, 30 | - | - | shared_host | Combined:OFF/0, Midday:OFF/0, Evening:OFF/0 |
@@ -29,20 +32,20 @@ Purpose: compare strong states at the board level, surface shared families/lanes
 | 13 | SouthCarolina4 | 667, 006, 069, 007, 009, 077, 002, 224 | 17, 2, 5, 9, 10, 3, 15, 1 | - | - | shared_host | Combined:WATCH/2, Evening:WATCH/2, Midday:OFF/1 |
 | 14 | Virginia4 | 039, 599, 358, 138, 009, 559, 005, 334 | 15, 5, 14, 13, 1, 23, 32, 2 | - | - | shared_host | Combined:ALERT/3, Evening:ALERT/3, Midday:OFF/1 |
 
-## Board Scoreboard
+## Legacy Board Priority Receipt
 
-| Score Rank | State | Priority Score | Role | Spent | Evening Bias | Overlap Score | Primary Overlap Hits | Direct Cross Hits |
-|---:|---|---:|---|---|---|---:|---:|---:|
-| 1 | Connecticut4 | 128 | shared_host | unknown | - | 226 | 29 | 0 |
-| 2 | Delaware4 | 118 | shared_host | unknown | - | 235 | 31 | 0 |
-| 3 | Florida4 | 108 | shared_host | unknown | - | 209 | 27 | 0 |
-| 4 | Indiana4 | 98 | shared_host | unknown | - | 240 | 31 | 0 |
-| 5 | Michigan4 | 88 | shared_host | unknown | - | 199 | 25 | 0 |
-| 6 | NewJersey4 | 78 | shared_host | unknown | - | 264 | 34 | 0 |
-| 7 | NewYork4 | 68 | shared_host | unknown | - | 255 | 33 | 0 |
-| 8 | NorthCarolina4 | 58 | shared_host | unknown | - | 241 | 28 | 0 |
-| 9 | Ohio4 | 48 | shared_host | unknown | - | 344 | 43 | 0 |
-| 10 | OntarioCanada4 | 38 | shared_host | unknown | - | 314 | 35 | 0 |
+| Input Order | Legacy Rank | State | Legacy Priority | Analytical Rank | Role | Spent | Evening Bias | Overlap Score | Primary Overlap Hits | Direct Cross Hits |
+|---:|---:|---|---:|---:|---|---|---|---:|---:|---:|
+| 1 | 1 | Connecticut4 | 128 | - | shared_host | unknown | - | 226 | 29 | 0 |
+| 2 | 2 | Delaware4 | 118 | - | shared_host | unknown | - | 235 | 31 | 0 |
+| 3 | 3 | Florida4 | 108 | - | shared_host | unknown | - | 209 | 27 | 0 |
+| 4 | 4 | Indiana4 | 98 | - | shared_host | unknown | - | 240 | 31 | 0 |
+| 5 | 5 | Michigan4 | 88 | - | shared_host | unknown | - | 199 | 25 | 0 |
+| 6 | 6 | NewJersey4 | 78 | - | shared_host | unknown | - | 264 | 34 | 0 |
+| 7 | 7 | NewYork4 | 68 | - | shared_host | unknown | - | 255 | 33 | 0 |
+| 8 | 8 | NorthCarolina4 | 58 | - | shared_host | unknown | - | 241 | 28 | 0 |
+| 9 | 9 | Ohio4 | 48 | - | shared_host | unknown | - | 344 | 43 | 0 |
+| 10 | 10 | OntarioCanada4 | 38 | - | shared_host | unknown | - | 314 | 35 | 0 |
 
 ## Relationships
 

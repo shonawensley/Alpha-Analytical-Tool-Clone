@@ -27,6 +27,17 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
+from scripts.tools.brain2_rank_contract import (
+    DISPLAY_ORDER_SOURCE_INPUT_ROSTER,
+    RANK_INTEGRITY_INVALID_STATIC_ORDER,
+    analytical_rank,
+    analytical_score,
+    display_order_contract_from_row,
+    rank_contract_from_row,
+    rank_signal_is_valid,
+    unavailable_rank_contract,
+)
+
 
 def _read_json(path: Path) -> Any:
     return json.loads(path.read_text(encoding="utf-8", errors="replace"))
@@ -238,9 +249,11 @@ def _mode_from_signals(summary: Dict[str, Any], scoreboard_row: Dict[str, Any], 
 
 
 def _cap_class(scoreboard_row: Dict[str, Any], posture: str) -> str:
+    if not rank_signal_is_valid(scoreboard_row):
+        return "unavailable"
     if posture != "PLAY":
-        return "low"
-    priority = _to_int(scoreboard_row.get("priority_score"), 0)
+        return "not_applicable"
+    priority = analytical_score(scoreboard_row) or 0.0
     overlap = _to_int(scoreboard_row.get("overlap_score"), 0)
     tracker_posture = str(scoreboard_row.get("tracker_posture") or "")
     spent_status = str(scoreboard_row.get("spent_status") or "")
@@ -256,7 +269,10 @@ def _cap_class(scoreboard_row: Dict[str, Any], posture: str) -> str:
     return "low"
 
 
-def _board_priority(score_rank: int) -> str:
+def _board_priority(scoreboard_row: Dict[str, Any]) -> str:
+    score_rank = analytical_rank(scoreboard_row)
+    if score_rank is None:
+        return "unavailable"
     if score_rank <= 2:
         return "tier1"
     if score_rank <= 4:
@@ -270,13 +286,17 @@ def _posture(scoreboard_row: Dict[str, Any]) -> Tuple[str, List[str]]:
     spent_status = str(scoreboard_row.get("spent_status") or "")
     evening_bias = str(scoreboard_row.get("evening_bias") or "")
     targeting_bucket = str(scoreboard_row.get("targeting_bucket") or "")
-    priority = _to_int(scoreboard_row.get("priority_score"), 0)
+    priority = analytical_score(scoreboard_row) or 0.0
     tracker_posture = str(scoreboard_row.get("tracker_posture") or "")
     direct_cross_hits = _to_int(scoreboard_row.get("direct_cross_hits"), 0)
 
     if spent_status == "locally_spent" or evening_bias == "de_emphasize":
         blockers.append("LOCAL_SPENT")
         return "SKIP", blockers
+
+    if not rank_signal_is_valid(scoreboard_row):
+        blockers.append("RANK_SIGNAL_UNAVAILABLE")
+        return "UNRESOLVED", blockers
 
     if targeting_bucket == "tight_core" and spent_status == "mostly_unspent" and priority >= 24:
         return "PLAY", blockers
@@ -320,6 +340,8 @@ def _carryover_action(scoreboard_row: Dict[str, Any], posture: str) -> str:
     spent_status = str(scoreboard_row.get("spent_status") or "")
     if spent_status == "locally_spent":
         return "close"
+    if not rank_signal_is_valid(scoreboard_row):
+        return "unresolved"
     if posture == "PLAY" and spent_status == "mostly_unspent":
         return "new"
     if posture == "WATCH":
@@ -415,8 +437,10 @@ def _reason_codes(summary: Dict[str, Any], scoreboard_row: Dict[str, Any], postu
         out.append("PLAY_STATE")
     elif posture == "WATCH":
         out.append("WATCH_STATE")
-    else:
+    elif posture == "SKIP":
         out.append("SKIP_STATE")
+    else:
+        out.extend(["RANK_SIGNAL_UNAVAILABLE", "UNRESOLVED_STATE"])
     return _ordered_unique(out)
 
 
@@ -430,7 +454,13 @@ def _environment_object(summary: Dict[str, Any], scoreboard_row: Dict[str, Any])
         "spent_status": str(scoreboard_row.get("spent_status") or ""),
         "evening_bias": str(scoreboard_row.get("evening_bias") or ""),
         "tracker_posture": str(scoreboard_row.get("tracker_posture") or ""),
-        "priority_score": _to_int(scoreboard_row.get("priority_score"), 0),
+        "legacy_priority_score": _to_int(
+            scoreboard_row.get("legacy_priority_score") or scoreboard_row.get("priority_score"),
+            0,
+        ),
+        "analytical_rank": analytical_rank(scoreboard_row),
+        "analytical_score": analytical_score(scoreboard_row),
+        "rank_integrity_status": rank_contract_from_row(scoreboard_row).get("rank_integrity_status"),
         "overlap_score": _to_int(scoreboard_row.get("overlap_score"), 0),
         "direct_cross_hits": _to_int(scoreboard_row.get("direct_cross_hits"), 0),
         "primary_overlap_hits": _to_int(scoreboard_row.get("primary_overlap_hits"), 0),
@@ -505,14 +535,21 @@ def build_shadow_decision_policy_payload(
             continue
         state_key = str(row.get("state_key") or "")
         summary = summary_by_state.get(state_key, {})
-        score_rank = _to_int(row.get("score_rank"), len(state_decisions) + 1)
+        rank_contract = rank_contract_from_row(row)
         posture, blockers = _posture(row)
         mode = _mode_from_signals(summary, row, posture)
         cap_class = _cap_class(row, posture)
         decision = {
             "state_key": state_key,
-            "score_rank": score_rank,
-            "board_priority": _board_priority(score_rank),
+            "input_order": _to_int(row.get("input_order") or row.get("input_rank"), len(state_decisions) + 1),
+            **display_order_contract_from_row(row),
+            "legacy_static_rank": _to_int(row.get("legacy_static_rank") or row.get("score_rank"), len(state_decisions) + 1),
+            "legacy_priority_score": _to_int(row.get("legacy_priority_score") or row.get("priority_score"), 0),
+            "score_rank": _to_int(row.get("score_rank"), len(state_decisions) + 1),
+            "analytical_rank": rank_contract.get("analytical_rank"),
+            "analytical_score": rank_contract.get("analytical_score"),
+            "rank_contract": rank_contract,
+            "board_priority": _board_priority(row),
             "posture": posture,
             "mode": mode,
             "cap_class": cap_class,
@@ -528,15 +565,22 @@ def build_shadow_decision_policy_payload(
     play_states = [row["state_key"] for row in state_decisions if row.get("posture") == "PLAY"]
     watch_states = [row["state_key"] for row in state_decisions if row.get("posture") == "WATCH"]
     skip_states = [row["state_key"] for row in state_decisions if row.get("posture") == "SKIP"]
+    unresolved_states = [row["state_key"] for row in state_decisions if row.get("posture") == "UNRESOLVED"]
 
     return {
-        "schema_version": "shadow_decision_policy_v0",
+        "schema_version": "shadow_decision_policy_v1",
         "metadata": {
             "results_date": overlay_meta.get("results_date"),
             "board_name": overlay_meta.get("board_name"),
             "profile": overlay_meta.get("profile") or scoreboard_meta.get("profile"),
             "experiment_tag": overlay_meta.get("experiment_tag") or scoreboard_meta.get("experiment_tag"),
             "mode": "shadow",
+            "rank_integrity_status": RANK_INTEGRITY_INVALID_STATIC_ORDER,
+        },
+        "rank_contract": unavailable_rank_contract(),
+        "display_order_contract": {
+            "display_order_source": DISPLAY_ORDER_SOURCE_INPUT_ROSTER,
+            "display_order_is_analytical": False,
         },
         "artifacts": {
             "overlay_board_name": overlay_meta.get("board_name"),
@@ -549,6 +593,8 @@ def build_shadow_decision_policy_payload(
             "play_states": play_states,
             "watch_states": watch_states,
             "skip_states": skip_states,
+            "unresolved_states": unresolved_states,
+            "rank_dependent_decisions_available": False,
         },
     }
 
@@ -563,6 +609,10 @@ def build_shadow_decision_policy_markdown(payload: Dict[str, Any]) -> str:
         "",
         "Purpose: shadow-only decision policy receipt derived from the existing Brain 2 overlay and scoreboard.",
         "",
+        "**RANK INTEGRITY STATUS: `INVALID_STATIC_ORDER`.** Rank-dependent posture, tier, cap, and route decisions are unresolved; structural evidence remains visible.",
+        "",
+        "**DISPLAY ORDER:** `INPUT_ROSTER_NON_ANALYTICAL`; navigation only, with no analytical meaning.",
+        "",
         "## Shadow Verdict",
         "",
         f"- top_play_state: `{verdict.get('top_play_state') or '-'}`",
@@ -570,17 +620,18 @@ def build_shadow_decision_policy_markdown(payload: Dict[str, Any]) -> str:
         f"- play_states: `{', '.join(verdict.get('play_states') or []) or '-'}`",
         f"- watch_states: `{', '.join(verdict.get('watch_states') or []) or '-'}`",
         f"- skip_states: `{', '.join(verdict.get('skip_states') or []) or '-'}`",
+        f"- unresolved_states: `{', '.join(verdict.get('unresolved_states') or []) or '-'}`",
         "",
         "## Decisions",
         "",
-        "| Rank | State | Posture | Mode | Cap | Route | Carryover | Reasons |",
-        "|---:|---|---|---|---|---|---|---|",
+        "| Input Order | Legacy Rank | Analytical Rank | State | Posture | Mode | Cap | Route | Carryover | Reasons |",
+        "|---:|---:|---:|---|---|---|---|---|---|---|",
     ]
     for row in state_decisions:
         if not isinstance(row, dict):
             continue
         lines.append(
-            f"| {row.get('score_rank')} | {row.get('state_key')} | {row.get('posture')} | {row.get('mode')} | {row.get('cap_class')} | {row.get('translator_route')} | {row.get('carryover_action')} | {', '.join(row.get('reason_codes') or []) or '-'} |"
+            f"| {row.get('input_order')} | {row.get('legacy_static_rank')} | {row.get('analytical_rank') or '-'} | {row.get('state_key')} | {row.get('posture')} | {row.get('mode')} | {row.get('cap_class')} | {row.get('translator_route')} | {row.get('carryover_action')} | {', '.join(row.get('reason_codes') or []) or '-'} |"
         )
 
     lines.append("")

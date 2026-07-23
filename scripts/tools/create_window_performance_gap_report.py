@@ -35,6 +35,14 @@ from scripts.tools.analysis_arena_window_utils import (
     winner_events_for_state,
     winners_for_date,
 )
+from scripts.tools.brain2_rank_contract import (
+    RANK_INTEGRITY_INVALID_STATIC_ORDER,
+    analytical_rank,
+    analytical_score,
+    display_order_contract_from_row,
+    rank_contract_from_row,
+    rank_evaluation_status,
+)
 
 
 DEFAULT_RESULTS_ROOT = REPO_ROOT / "data" / "results"
@@ -266,6 +274,9 @@ def _build_ledger(window_root: Path, *, results_root: Path) -> Dict[str, Any]:
             if not winner_events:
                 continue
             scoreboard_row = scoreboard_by_state.get(state_key, {})
+            rank_contract = rank_contract_from_row(scoreboard_row)
+            display_contract = display_order_contract_from_row(scoreboard_row)
+            rank_valid = bool(rank_contract.get("rank_signal_valid"))
             shadow_row = shadow_by_state.get(state_key, {})
             manifest_entry = manifest_by_state.get(state_key, {})
             seed = load_state_seed_from_manifest_entry(manifest_entry) if manifest_entry else {}
@@ -307,7 +318,6 @@ def _build_ledger(window_root: Path, *, results_root: Path) -> Dict[str, Any]:
                     "b36_box": False,
                 }
                 inventory = inventory_map.get((results_date, state_key, winner.period, winner.literal), {})
-                priority_score = scoreboard_row.get("priority_score")
                 ledger_row: Dict[str, Any] = {
                     "date": results_date,
                     "state_key": state_key,
@@ -316,8 +326,18 @@ def _build_ledger(window_root: Path, *, results_root: Path) -> Dict[str, Any]:
                     "winner_canonical": winner.canonical,
                     "winner_vtrac_index": winner.vtrac_index if winner.vtrac_index is not None else "",
                     "winner_on_board": bool(scoreboard_row),
-                    "board_rank": scoreboard_row.get("score_rank", ""),
-                    "board_priority_score": priority_score if priority_score is not None else "",
+                    **display_contract,
+                    "input_order": scoreboard_row.get("input_order") or scoreboard_row.get("input_rank") or "",
+                    "legacy_static_rank": scoreboard_row.get("legacy_static_rank") or scoreboard_row.get("score_rank") or "",
+                    "legacy_priority_score": scoreboard_row.get("legacy_priority_score") or scoreboard_row.get("priority_score") or "",
+                    "board_rank": analytical_rank(scoreboard_row) or "",
+                    "board_priority_score": analytical_score(scoreboard_row) if rank_valid else "",
+                    "analytical_rank": rank_contract.get("analytical_rank") or "",
+                    "analytical_score": rank_contract.get("analytical_score") if rank_valid else "",
+                    "analytical_rank_source": rank_contract.get("analytical_rank_source") or "",
+                    "rank_signal_valid": rank_valid,
+                    "rank_integrity_status": rank_contract.get("rank_integrity_status"),
+                    "rank_exclusion_reason": rank_contract.get("rank_exclusion_reason"),
                     "board_role": scoreboard_row.get("role", ""),
                     "board_bucket": scoreboard_row.get("targeting_bucket", ""),
                     "board_tracker_posture": scoreboard_row.get("tracker_posture", ""),
@@ -326,9 +346,15 @@ def _build_ledger(window_root: Path, *, results_root: Path) -> Dict[str, Any]:
                     "shadow_cap_class": shadow_row.get("cap_class", ""),
                     "translator_route": shadow_row.get("translator_route", ""),
                     "reason_codes": ",".join(shadow_row.get("reason_codes") or []),
-                    "top_primary_target": board_verdict.get("top_primary_target") == state_key,
-                    "secondary_target": board_verdict.get("secondary_target") == state_key,
-                    "best_clean_host": board_verdict.get("best_clean_host") == state_key,
+                    "top_primary_target": (
+                        board_verdict.get("top_primary_target") == state_key if rank_valid else ""
+                    ),
+                    "secondary_target": (
+                        board_verdict.get("secondary_target") == state_key if rank_valid else ""
+                    ),
+                    "best_clean_host": (
+                        board_verdict.get("best_clean_host") == state_key if rank_valid else ""
+                    ),
                     "highest_context_support_state": board_verdict.get("highest_context_support_state") == state_key,
                     "arena_primary_box": row_flags.get("arena_primary_box", False),
                     "arena_context_box": row_flags.get("arena_context_box", False),
@@ -371,13 +397,33 @@ def _count_truthy(rows: Iterable[Dict[str, Any]], key: str) -> int:
     return sum(1 for row in rows if bool(row.get(key)))
 
 
-def _rank_histogram(rows: List[Dict[str, Any]]) -> Dict[str, int]:
-    out = {"top3": 0, "top5": 0, "top8": 0, "off_board": 0}
-    for row in rows:
+def _rank_histogram(rows: List[Dict[str, Any]]) -> Dict[str, Any]:
+    valid_rows = [row for row in rows if row.get("rank_signal_valid") is True]
+    if not valid_rows:
+        return {
+            "status": "NOT_EVALUABLE",
+            "evaluable": False,
+            "reason": RANK_INTEGRITY_INVALID_STATIC_ORDER,
+            "valid_ranked_event_count": 0,
+            "top3": None,
+            "top5": None,
+            "top8": None,
+            "off_board": sum(1 for row in rows if not bool(row.get("winner_on_board"))),
+        }
+    out: Dict[str, Any] = {
+        "status": "EVALUABLE",
+        "evaluable": True,
+        "reason": None,
+        "valid_ranked_event_count": len(valid_rows),
+        "top3": 0,
+        "top5": 0,
+        "top8": 0,
+        "off_board": sum(1 for row in rows if not bool(row.get("winner_on_board"))),
+    }
+    for row in valid_rows:
         try:
             rank = int(str(row.get("board_rank") or "").strip())
         except Exception:
-            out["off_board"] += 1
             continue
         if rank <= 3:
             out["top3"] += 1
@@ -422,9 +468,15 @@ def _aggregate(window_root: Path, ledger_payload: Dict[str, Any]) -> Dict[str, A
     summary = {
         "winner_events": total,
         "winner_on_board": _count_truthy(rows, "winner_on_board"),
-        "top_primary_target": _count_truthy(rows, "top_primary_target"),
-        "secondary_target": _count_truthy(rows, "secondary_target"),
-        "best_clean_host": _count_truthy(rows, "best_clean_host"),
+        "top_primary_target": (
+            _count_truthy(rows, "top_primary_target") if rank_hist["evaluable"] else None
+        ),
+        "secondary_target": (
+            _count_truthy(rows, "secondary_target") if rank_hist["evaluable"] else None
+        ),
+        "best_clean_host": (
+            _count_truthy(rows, "best_clean_host") if rank_hist["evaluable"] else None
+        ),
         "highest_context_support_state": _count_truthy(rows, "highest_context_support_state"),
         "arena_box_signal": _count_truthy(rows, "arena_box_signal"),
         "arena_exact_signal": _count_truthy(rows, "arena_exact_signal"),
@@ -446,6 +498,19 @@ def _aggregate(window_root: Path, ledger_payload: Dict[str, Any]) -> Dict[str, A
             1 for row in rows if str(row.get("inventory_type") or "").strip() in {"double", "mirror_double", "triple"}
         ),
         "board_rank_histogram": rank_hist,
+        "rank_dependent_target_evaluation": rank_evaluation_status(
+            [
+                {
+                    "analytical_rank": row.get("analytical_rank"),
+                    "analytical_score": row.get("analytical_score"),
+                    "analytical_rank_source": row.get("analytical_rank_source") or None,
+                    "rank_signal_available": row.get("rank_signal_valid") is True,
+                    "rank_signal_valid": row.get("rank_signal_valid") is True,
+                    "rank_integrity_status": row.get("rank_integrity_status"),
+                }
+                for row in rows
+            ]
+        ),
     }
     rates = {key: {"count": value, "rate": _pct(value, total)} for key, value in summary.items() if isinstance(value, int)}
     return {
@@ -495,10 +560,14 @@ def _render_markdown(payload: Dict[str, Any], *, ledger_path: Path) -> str:
     lines.append("")
     lines.append(f"- Winner events: `{counts['winner_events']}`")
     lines.append(f"- Winner on board: `{counts['winner_on_board']}` ({rates['winner_on_board']['rate']})")
-    lines.append(f"- Board top3 containment: `{counts['board_rank_histogram']['top3']}` ({_pct(counts['board_rank_histogram']['top3'], counts['winner_events'])})")
-    lines.append(f"- Board top5 containment: `{counts['board_rank_histogram']['top5']}` ({_pct(counts['board_rank_histogram']['top5'], counts['winner_events'])})")
-    lines.append(f"- Top primary target hits: `{counts['top_primary_target']}` ({rates['top_primary_target']['rate']})")
-    lines.append(f"- Best clean host hits: `{counts['best_clean_host']}` ({rates['best_clean_host']['rate']})")
+    if counts["board_rank_histogram"]["evaluable"]:
+        lines.append(f"- Board top3 containment: `{counts['board_rank_histogram']['top3']}` ({_pct(counts['board_rank_histogram']['top3'], counts['winner_events'])})")
+        lines.append(f"- Board top5 containment: `{counts['board_rank_histogram']['top5']}` ({_pct(counts['board_rank_histogram']['top5'], counts['winner_events'])})")
+        lines.append(f"- Top primary target hits: `{counts['top_primary_target']}` ({rates['top_primary_target']['rate']})")
+        lines.append(f"- Best clean host hits: `{counts['best_clean_host']}` ({rates['best_clean_host']['rate']})")
+    else:
+        lines.append("- Board Capture@K / median-rank evaluation: `NOT_EVALUABLE` (`INVALID_STATIC_ORDER`).")
+        lines.append("- Top-primary-target / best-clean-host hit rates: `NOT_EVALUABLE` (`INVALID_STATIC_ORDER`).")
     lines.append(f"- Arena box signal present: `{counts['arena_box_signal']}` ({rates['arena_box_signal']['rate']})")
     lines.append(f"- Arena exact signal present: `{counts['arena_exact_signal']}` ({rates['arena_exact_signal']['rate']})")
     lines.append(f"- Arena VTRAC signal present: `{counts['arena_primary_vt']}` ({rates['arena_primary_vt']['rate']})")

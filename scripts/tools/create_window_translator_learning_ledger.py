@@ -204,25 +204,24 @@ def _support_score(row: Dict[str, str]) -> int:
 
 
 def _sorted_examples(rows: Iterable[Dict[str, str]], *, limit: int = 6) -> List[Dict[str, Any]]:
-    def sort_key(row: Dict[str, str]) -> Tuple[int, int, str, str, str]:
-        rank = _as_int(row.get("board_rank"))
+    def sort_key(row: Dict[str, str]) -> Tuple[int, int, str, str]:
         return (
             0 if "GAP" in str(row.get("primary_cohort") or "") else 1,
-            rank if rank > 0 else 999,
             -_as_int(row.get("translator_support_score")),
             str(row.get("date") or ""),
             str(row.get("state_key") or ""),
         )
 
     out: List[Dict[str, Any]] = []
-    for row in sorted(rows, key=sort_key)[:limit]:
+    for deep_review_priority, row in enumerate(sorted(rows, key=sort_key)[:limit], start=1):
         out.append(
             {
+                "deep_review_priority": deep_review_priority,
+                "priority_claim_class": "POST_RESULT_RESEARCH",
                 "date": row.get("date", ""),
                 "state": row.get("state_key", ""),
                 "period": row.get("period", ""),
                 "winner": row.get("winner", ""),
-                "board_rank": _as_int(row.get("board_rank")),
                 "primary_cohort": row.get("primary_cohort", ""),
                 "cohort_tags": row.get("cohort_tags", "").split("|") if row.get("cohort_tags") else [],
                 "arena_final_candidate_signature": row.get("arena_final_candidate_signature", ""),
@@ -382,7 +381,9 @@ def _render_markdown(payload: Dict[str, Any], *, csv_path: Path) -> str:
     for row in examples.get("priority_rows") or []:
         lines.append(
             f"- `{row.get('date', '')}` `{row.get('state', '')}` `{row.get('period', '')}` winner=`{row.get('winner', '')}` "
-            f"rank=`{row.get('board_rank', 0)}` cohort=`{row.get('primary_cohort', '')}` "
+            f"deep_review_priority=`{row.get('deep_review_priority', '-')}` "
+            f"claim_class=`{row.get('priority_claim_class', 'POST_RESULT_RESEARCH')}` "
+            f"cohort=`{row.get('primary_cohort', '')}` "
             f"frontier=`{row.get('frontier_signature_type', '')}` sig=`{row.get('arena_final_candidate_signature', '')}` "
             f"double=`{row.get('double_context_strength', '') or '-'}`"
         )

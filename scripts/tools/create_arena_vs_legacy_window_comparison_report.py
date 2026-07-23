@@ -404,9 +404,16 @@ def _render_markdown(payload: Dict[str, Any]) -> str:
     arena_rates = arena["summary_rates"]
     rank_histogram = arena_counts.get("board_rank_histogram") or {}
     winner_events = int(arena_counts.get("winner_events") or 0)
-    board_top5_count = int(arena_counts.get("board_top5") or rank_histogram.get("top5") or 0)
+    rank_evaluable = rank_histogram.get("evaluable") is True
+    board_top5_count = (
+        int(rank_histogram.get("top5") or 0)
+        if rank_evaluable
+        else None
+    )
     board_top5_rate = (
-        board_top5_count / winner_events if winner_events else 0.0
+        board_top5_count / winner_events
+        if rank_evaluable and board_top5_count is not None and winner_events
+        else None
     )
     lines: List[str] = []
     lines.append("# Analysis Arena vs Legacy Same-Window Comparison")
@@ -428,10 +435,16 @@ def _render_markdown(payload: Dict[str, Any]) -> str:
         f"- Winner on board: `{arena['summary_counts'].get('winner_on_board', 0)}` "
         f"({_pct(_as_float(arena_rates.get('winner_on_board')))})"
     )
-    lines.append(
-        f"- Board top5 containment: `{board_top5_count}` "
-        f"({_pct(board_top5_rate)})"
-    )
+    if rank_evaluable:
+        lines.append(
+            f"- Board top5 containment: `{board_top5_count}` "
+            f"({_pct(float(board_top5_rate or 0.0))})"
+        )
+    else:
+        lines.append(
+            "- Board top5 containment: `NOT_EVALUABLE` "
+            f"(`{rank_histogram.get('reason') or 'INVALID_STATIC_ORDER'}`)"
+        )
     lines.append(
         f"- Candidate Universe exact / box: `{arena_counts.get('cu_exact', 0)}` "
         f"({_pct(_as_float(arena_rates.get('cu_exact')))}) / "

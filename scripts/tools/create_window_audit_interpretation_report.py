@@ -171,7 +171,6 @@ def _select_examples(rows: Sequence[Dict[str, str]], *, cohort: str, limit: int 
             -_safe_int(row.get("sharp_signal_count")),
             -_safe_int(row.get("box_source_count")),
             -_safe_float(row.get("frontier_strength_score")),
-            _safe_int(row.get("board_rank"), default=999),
             str(row.get("date") or ""),
             str(row.get("state_key") or ""),
         )
@@ -186,6 +185,9 @@ def _select_examples(rows: Sequence[Dict[str, str]], *, cohort: str, limit: int 
             "outcome_class": row.get("outcome_class", ""),
             "evidence_status": row.get("evidence_status", ""),
             "board_rank": row.get("board_rank", ""),
+            "legacy_static_rank": row.get("legacy_static_rank", ""),
+            "rank_signal_valid": row.get("rank_signal_valid", ""),
+            "rank_integrity_status": row.get("rank_integrity_status", ""),
             "sharp_signal_count": row.get("sharp_signal_count", ""),
             "territory_signal_count": row.get("territory_signal_count", ""),
             "frontier_signature_type": row.get("frontier_signature_type", ""),
@@ -254,6 +256,9 @@ def _priority_case_rows(util_rows: Sequence[Dict[str, str]]) -> List[Dict[str, A
                 "outcome_class": row.get("outcome_class", ""),
                 "evidence_status": row.get("evidence_status", ""),
                 "board_rank": row.get("board_rank", ""),
+                "legacy_static_rank": row.get("legacy_static_rank", ""),
+                "rank_signal_valid": row.get("rank_signal_valid", ""),
+                "rank_integrity_status": row.get("rank_integrity_status", ""),
                 "sharp_signal_count": row.get("sharp_signal_count", ""),
                 "territory_signal_count": row.get("territory_signal_count", ""),
                 "box_source_count": row.get("box_source_count", ""),
@@ -278,7 +283,6 @@ def _priority_case_rows(util_rows: Sequence[Dict[str, str]]) -> List[Dict[str, A
                 -_safe_int(row.get("sharp_signal_count")),
                 -_safe_int(row.get("box_source_count")),
                 -_safe_float(row.get("frontier_strength_score")),
-                _safe_int(row.get("board_rank"), default=999),
                 str(row.get("date") or ""),
             )
         )
@@ -426,7 +430,12 @@ def _render_examples(title: str, examples: Sequence[Dict[str, Any]]) -> List[str
         lines.append(
             f"- `{row.get('date')}` `{row.get('state_key')}` `{row.get('period')}` winner=`{row.get('winner')}` "
             f"outcome=`{row.get('outcome_class')}` status=`{row.get('evidence_status')}` "
-            f"rank=`{row.get('board_rank')}` sharp=`{row.get('sharp_signal_count')}` "
+            + (
+                f"analytical_rank=`{row.get('board_rank')}` "
+                if _truthy(row.get("rank_signal_valid"))
+                else "analytical_rank=`NOT_EVALUABLE` "
+            )
+            + f"sharp=`{row.get('sharp_signal_count')}` "
             f"frontier=`{row.get('frontier_signature_type') or '-'}` decay=`{row.get('decay_any_profile') or '-'}`"
         )
     lines.append("")

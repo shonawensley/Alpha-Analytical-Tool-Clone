@@ -20,6 +20,12 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
+from scripts.tools.brain2_rank_contract import (
+    analytical_rank,
+    display_order_contract_from_row,
+    rank_contract_from_row,
+)
+
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 RUNS2_VALIDATION_DIR = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "RUNS_2" / "VALIDATION"
@@ -162,9 +168,14 @@ def _board_rows_from_sandbox_seeds(day_dir: Path, *, profile: str, experiment_ta
         scoreboard = brain2.get("scoreboard_row") or {}
         if not isinstance(scoreboard, Mapping):
             continue
+        display_contract = display_order_contract_from_row(scoreboard)
         row = {
             "state_key": state_dir.name,
-            "score_rank": safe_int(scoreboard.get("score_rank")) or 9999,
+            "input_order": safe_int(scoreboard.get("input_order") or scoreboard.get("input_rank")) or 9999,
+            **display_contract,
+            "legacy_static_rank": scoreboard.get("legacy_static_rank") or scoreboard.get("score_rank"),
+            "analytical_rank": analytical_rank(scoreboard),
+            "rank_integrity_status": rank_contract_from_row(scoreboard).get("rank_integrity_status"),
             "role": str(scoreboard.get("role") or "").strip(),
             "bucket": str(scoreboard.get("targeting_bucket") or "").strip(),
             "tracker": str(scoreboard.get("tracker_posture") or "").strip(),
@@ -177,7 +188,7 @@ def _board_rows_from_sandbox_seeds(day_dir: Path, *, profile: str, experiment_ta
             "r_consensus_hint": str(scoreboard.get("r_consensus_hint") or "").strip(),
         }
         rows.append(row)
-    rows.sort(key=lambda row: (row["score_rank"], row["state_key"]))
+    rows.sort(key=lambda row: (row["display_order"] or 9999, row["state_key"]))
     return rows
 
 
@@ -370,6 +381,10 @@ def build_control_center_daily_report(
     lines.append("")
     lines.append("## 1) Brain 2 Carry-Through Snapshot")
     lines.append("")
+    lines.append(
+        "- Rank integrity: `NOT_EVALUABLE / INVALID_STATIC_ORDER`; "
+        "display order source is `INPUT_ROSTER_NON_ANALYTICAL` and carries no analytical meaning."
+    )
     if board_rows:
         for row in board_rows[:8]:
             hints = " | ".join(
@@ -385,7 +400,7 @@ def build_control_center_daily_report(
                 if part
             )
             lines.append(
-                f"- **{row['state_key']}**: `#{row['score_rank']}` role=`{row['role'] or '-'}` bucket=`{row['bucket'] or '-'}` tracker=`{row['tracker'] or '-'}` canonicals=`{','.join(row['top_canonicals'][:3]) or '-'}` hints=`{hints or '-'}`"
+                f"- **{row['state_key']}**: display=`{row['display_order']}` input=`{row['input_order']}` legacy_rank=`{row['legacy_static_rank'] or '-'}` analytical_rank=`{row['analytical_rank'] or '-'}` role=`{row['role'] or '-'}` bucket=`{row['bucket'] or '-'}` tracker=`{row['tracker'] or '-'}` canonicals=`{','.join(row['top_canonicals'][:3]) or '-'}` hints=`{hints or '-'}`"
             )
     else:
         lines.append("- No Brain 2 carry-through rows found in translation sandbox seeds.")

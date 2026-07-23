@@ -26,6 +26,12 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from modules.vtrac_reference import get_vtrac_index
+from scripts.tools.brain2_rank_contract import (
+    DISPLAY_ORDER_SOURCE_INPUT_ROSTER,
+    RANK_INTEGRITY_INVALID_STATIC_ORDER,
+    legacy_rank_fields,
+    unavailable_rank_contract,
+)
 
 
 def _read_json(path: Path) -> Any:
@@ -973,6 +979,7 @@ def _build_board_summary(
         if row.get("pair_score", 0) >= 2 or len(row.get("relationship_types") or []) >= 2
     ][:10]
 
+    input_order_by_state = {state_key: index for index, state_key in enumerate(state_order, start=1)}
     state_role_hints: List[Dict[str, Any]] = []
     board_scoreboard: List[Dict[str, Any]] = []
     for state_key in state_order:
@@ -997,7 +1004,8 @@ def _build_board_summary(
             role = "shared_host"
         else:
             role = "low_priority"
-        rank_points = (len(state_order) - state_order.index(state_key)) * 10
+        input_order = input_order_by_state[state_key]
+        rank_points = (len(state_order) - input_order + 1) * 10
         spent_adjustment = {
             "mostly_unspent": 6,
             "cross_state_spent": 2,
@@ -1019,7 +1027,6 @@ def _build_board_summary(
         board_scoreboard.append(
             {
                 "state_key": state_key,
-                "input_rank": state_order.index(state_key) + 1,
                 "role": role,
                 "spent_status": spent_status,
                 "evening_bias": str(midday_status.get("evening_bias") or ""),
@@ -1027,7 +1034,8 @@ def _build_board_summary(
                 "overlap_score": overlap_score,
                 "primary_overlap_hits": primary_overlap_hits,
                 "direct_cross_hits": direct_cross_hits,
-                "priority_score": priority_score,
+                "input_order": input_order,
+                "legacy_priority_score": priority_score,
             }
         )
 
@@ -1038,19 +1046,33 @@ def _build_board_summary(
             key=lambda item: (
                 0 if item.get("spent_status") == "mostly_unspent" else 1,
                 item.get("overlap_score", 0),
-                state_order.index(str(item.get("state_key") or "")),
+                str(item.get("state_key") or ""),
             ),
         )
         if row.get("spent_status") in {"mostly_unspent", "cross_state_spent"}
     ][:10]
 
-    board_scoreboard.sort(
+    legacy_ranked = sorted(
+        board_scoreboard,
         key=lambda item: (
-            -_to_int(item.get("priority_score"), default=0),
-            _to_int(item.get("input_rank"), default=999),
+            -_to_int(item.get("legacy_priority_score"), default=0),
+            _to_int(item.get("input_order"), default=999),
             str(item.get("state_key") or ""),
         )
     )
+    legacy_rank_by_state = {
+        str(row.get("state_key") or ""): rank
+        for rank, row in enumerate(legacy_ranked, start=1)
+    }
+    for row in board_scoreboard:
+        row.update(
+            legacy_rank_fields(
+                input_order=_to_int(row.get("input_order"), default=999),
+                legacy_static_rank=legacy_rank_by_state[str(row.get("state_key") or "")],
+                legacy_priority_score=_to_int(row.get("legacy_priority_score"), default=0),
+            )
+        )
+    board_scoreboard.sort(key=lambda item: (_to_int(item.get("input_order"), 999), str(item.get("state_key") or "")))
 
     return {
         "strongest_overlap_pairs": strongest_overlap_pairs,
@@ -1136,7 +1158,7 @@ def build_board_spillover_overlay_payload(
         unique_inputs.append(path)
 
     return {
-        "schema_version": "board_spillover_overlay_v0",
+        "schema_version": "board_spillover_overlay_v1",
         "metadata": {
             "generated_at": _now_utc_iso(),
             "results_date": results_date,
@@ -1146,6 +1168,7 @@ def build_board_spillover_overlay_payload(
             "sharepack_root": _safe_rel(sharepacks_root, repo_root),
             "states": state_order,
             "midday_results_path": _safe_rel(midday_results_path, repo_root) if midday_results_path and midday_results_path.exists() else None,
+            "rank_integrity_status": RANK_INTEGRITY_INVALID_STATIC_ORDER,
         },
         "provenance": {
             "inputs_hash": _hash_inputs(unique_inputs),
@@ -1159,6 +1182,11 @@ def build_board_spillover_overlay_payload(
         "board_context": {
             "midday_results_available": bool(midday_results),
             "midday_results": midday_results,
+        },
+        "rank_contract": unavailable_rank_contract(),
+        "display_order_contract": {
+            "display_order_source": DISPLAY_ORDER_SOURCE_INPUT_ROSTER,
+            "display_order_is_analytical": False,
         },
         "state_summaries": [summaries_by_state[state_key] for state_key in state_order],
         "relationships": relationships,
@@ -1179,6 +1207,9 @@ def build_board_spillover_overlay_markdown(payload: Dict[str, Any]) -> str:
     lines.append("")
     lines.append("Purpose: compare strong states at the board level, surface shared families/lanes, and classify simple spillover and spent-vs-unspent conditions.")
     lines.append("")
+    lines.append("**RANK INTEGRITY STATUS: `INVALID_STATIC_ORDER`.** Legacy rank/priority fields are diagnostic receipts only; analytical state rank is unavailable and contributes `0.0`.")
+    lines.append("**DISPLAY ORDER:** `INPUT_ROSTER_NON_ANALYTICAL`; navigation only, with no analytical meaning.")
+    lines.append("")
     lines.append("## Summary")
     lines.append("")
     lines.append(f"- schema_version: `{payload.get('schema_version', '')}`")
@@ -1190,7 +1221,7 @@ def build_board_spillover_overlay_markdown(payload: Dict[str, Any]) -> str:
     lines.append("")
     lines.append("## State Summaries")
     lines.append("")
-    lines.append("| Rank | State | Top Canonicals | Top VTRAC | Midday Status | Evening Bias | Role Hint | BA Standing |")
+    lines.append("| Input Order | State | Top Canonicals | Top VTRAC | Midday Status | Evening Bias | Role Hint | BA Standing |")
     lines.append("|---:|---|---|---|---|---|---|---|")
     role_map = {
         str(row.get("state_key") or ""): str(row.get("role") or "")
@@ -1215,15 +1246,15 @@ def build_board_spillover_overlay_markdown(payload: Dict[str, Any]) -> str:
     scoreboard = board_summary.get("board_scoreboard") if isinstance(board_summary.get("board_scoreboard"), list) else []
     if scoreboard:
         lines.append("")
-        lines.append("## Board Scoreboard")
+        lines.append("## Legacy Board Priority Receipt")
         lines.append("")
-        lines.append("| Score Rank | State | Priority Score | Role | Spent | Evening Bias | Overlap Score | Primary Overlap Hits | Direct Cross Hits |")
-        lines.append("|---:|---|---:|---|---|---|---:|---:|---:|")
-        for score_rank, row in enumerate(scoreboard[:10], start=1):
+        lines.append("| Input Order | Legacy Rank | State | Legacy Priority | Analytical Rank | Role | Spent | Evening Bias | Overlap Score | Primary Overlap Hits | Direct Cross Hits |")
+        lines.append("|---:|---:|---|---:|---:|---|---|---|---:|---:|---:|")
+        for row in scoreboard[:10]:
             if not isinstance(row, dict):
                 continue
             lines.append(
-                f"| {score_rank} | {row.get('state_key')} | {row.get('priority_score')} | {row.get('role')} | {row.get('spent_status')} | {row.get('evening_bias') or '-'} | {row.get('overlap_score')} | {row.get('primary_overlap_hits')} | {row.get('direct_cross_hits')} |"
+                f"| {row.get('input_order')} | {row.get('legacy_static_rank')} | {row.get('state_key')} | {row.get('legacy_priority_score')} | {row.get('analytical_rank') or '-'} | {row.get('role')} | {row.get('spent_status')} | {row.get('evening_bias') or '-'} | {row.get('overlap_score')} | {row.get('primary_overlap_hits')} | {row.get('direct_cross_hits')} |"
             )
 
     if relationships:

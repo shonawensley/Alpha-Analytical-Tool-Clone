@@ -42,6 +42,12 @@ from scripts.tools.create_window_evidence_utilization_audit import (  # type: ig
     _signals_from_seed,
     _truthy,
 )
+from scripts.tools.brain2_rank_contract import (
+    analytical_rank,
+    analytical_score,
+    display_order_contract_from_row,
+    rank_contract_from_row,
+)
 
 
 FINAL_DOCS_DIR = REPO_ROOT / "docs" / "AAT9_KIT" / "FINAL VALIDATION" / "final docs"
@@ -639,6 +645,9 @@ def _build_exposure_rows(
             exact_count = len(match["exact_event_ids"])
             box_count = len(match["box_event_ids"])
             vt_count = len(_ordered_unique(match["vt_straight_event_ids"] + match["vt_box_event_ids"]))
+            scoreboard_row = scoreboard_rows.get((date, state_key), {})
+            rank_contract = rank_contract_from_row(scoreboard_row)
+            display_contract = display_order_contract_from_row(scoreboard_row)
             rows.append(
                 {
                     "date": date,
@@ -670,9 +679,15 @@ def _build_exposure_rows(
                     "same_day_false_positive_proxy": str(not bool(match["matched_event_ids"])),
                     "best_match_mode": match["best_match_mode"],
                     "match_modes": match["match_modes"],
-                    "board_rank": scoreboard_rows.get((date, state_key), {}).get("score_rank", ""),
-                    "board_priority_score": scoreboard_rows.get((date, state_key), {}).get("priority_score", ""),
-                    "board_tracker_posture": scoreboard_rows.get((date, state_key), {}).get("tracker_posture", ""),
+                    **display_contract,
+                    "legacy_static_rank": scoreboard_row.get("legacy_static_rank") or scoreboard_row.get("score_rank") or "",
+                    "legacy_priority_score": scoreboard_row.get("legacy_priority_score") or scoreboard_row.get("priority_score") or "",
+                    "board_rank": analytical_rank(scoreboard_row) or "",
+                    "board_priority_score": analytical_score(scoreboard_row) if rank_contract.get("rank_signal_valid") else "",
+                    "analytical_rank": rank_contract.get("analytical_rank") or "",
+                    "rank_signal_valid": bool(rank_contract.get("rank_signal_valid")),
+                    "rank_integrity_status": rank_contract.get("rank_integrity_status"),
+                    "board_tracker_posture": scoreboard_row.get("tracker_posture", ""),
                 }
             )
 
@@ -899,6 +914,9 @@ def _fixture_candidates(
                 "outcome_class": outcome,
                 "evidence_status": status,
                 "board_rank": row.get("board_rank", ""),
+                "legacy_static_rank": row.get("legacy_static_rank", ""),
+                "rank_signal_valid": row.get("rank_signal_valid", ""),
+                "rank_integrity_status": row.get("rank_integrity_status", ""),
                 "sharp_signal_count": row.get("sharp_signal_count", ""),
                 "territory_signal_count": row.get("territory_signal_count", ""),
                 "stage2_fixture_sources": "|".join(fixture_sources),

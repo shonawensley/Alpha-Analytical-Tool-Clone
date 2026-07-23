@@ -17,6 +17,7 @@ if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
 from scripts.tools.analysis_arena_window_utils import read_json, safe_rel
+from scripts.tools.brain2_rank_contract import RANK_INTEGRITY_INVALID_STATIC_ORDER
 
 
 def _parse_args() -> argparse.Namespace:
@@ -126,13 +127,10 @@ def _hit_primary_class(row: Dict[str, str]) -> str:
 
 
 def _sorted_examples(rows: Iterable[Dict[str, str]], *, limit: int = 5) -> List[Dict[str, Any]]:
-    def sort_key(row: Dict[str, str]) -> tuple[int, int, int, str, str]:
-        rank = _as_int(row.get("board_rank"))
+    def sort_key(row: Dict[str, str]) -> tuple[int, str, str]:
         score = _as_int(row.get("arena_final_candidate_signature_score"))
         return (
-            rank if rank > 0 else 999,
             -score,
-            0 if _truthy(row.get("top_primary_target")) else 1,
             str(row.get("date") or ""),
             str(row.get("state_key") or row.get("state") or ""),
         )
@@ -145,9 +143,9 @@ def _sorted_examples(rows: Iterable[Dict[str, str]], *, limit: int = 5) -> List[
                 "state": row.get("state_key") or row.get("state") or "",
                 "period": row.get("period", ""),
                 "winner": row.get("winner", ""),
-                "board_rank": _as_int(row.get("board_rank")),
-                "top_primary_target": _truthy(row.get("top_primary_target")),
-                "best_clean_host": _truthy(row.get("best_clean_host")),
+                "display_order": row.get("display_order", ""),
+                "analytical_rank": row.get("analytical_rank", "") if _truthy(row.get("rank_signal_valid")) else "",
+                "legacy_static_rank": row.get("legacy_static_rank", ""),
                 "arena_final_candidate_signature": row.get("arena_final_candidate_signature", ""),
                 "arena_final_candidate_signature_score": _as_int(row.get("arena_final_candidate_signature_score")),
                 "hit_primary_class": _hit_primary_class(row),
@@ -187,6 +185,11 @@ def build_payload(window_root: Path, *, frontier_json: Path | None = None) -> Di
     explicit_box_events = [row for row in ledger_rows if _truthy(row.get("arena_box_signal"))]
     explicit_exact_events = [row for row in ledger_rows if _truthy(row.get("arena_exact_signal"))]
     opportunity_gaps = [row for row in ledger_rows if _truthy(row.get("opportunity_gap_box"))]
+    rank_evaluable = any(
+        _truthy(row.get("rank_signal_valid"))
+        and bool(str(row.get("analytical_rank") or row.get("board_rank") or "").strip())
+        for row in ledger_rows
+    )
 
     hit_count = len(hit_rows)
     finalist_supported_hits = [row for row in hit_rows if _finalist_bucket(row) != "CONTROL_ARM_ONLY_CATCH"]
@@ -269,9 +272,20 @@ def build_payload(window_root: Path, *, frontier_json: Path | None = None) -> Di
             sum(_truthy(row.get("arena_primary_box")) for row in opportunity_gaps),
             len(opportunity_gaps),
         ),
-        "gap_rows_ranked_top5": _metric(
-            sum(0 < _as_int(row.get("board_rank")) <= 5 for row in opportunity_gaps),
-            len(opportunity_gaps),
+        "gap_rows_ranked_top5": (
+            _metric(
+                sum(0 < _as_int(row.get("analytical_rank") or row.get("board_rank")) <= 5 for row in opportunity_gaps),
+                len(opportunity_gaps),
+            )
+            if rank_evaluable
+            else {
+                "status": "NOT_EVALUABLE",
+                "evaluable": False,
+                "reason": RANK_INTEGRITY_INVALID_STATIC_ORDER,
+                "count": None,
+                "denominator": None,
+                "rate": None,
+            }
         ),
     }
 
@@ -302,6 +316,11 @@ def build_payload(window_root: Path, *, frontier_json: Path | None = None) -> Di
             "frontier_json_path": safe_rel(frontier_path),
             "winner_events": winner_events,
             "credited_hits": hit_count,
+            "rank_evaluation": {
+                "status": "EVALUABLE" if rank_evaluable else "NOT_EVALUABLE",
+                "evaluable": rank_evaluable,
+                "reason": None if rank_evaluable else RANK_INTEGRITY_INVALID_STATIC_ORDER,
+            },
         },
         "event_layer": event_layer,
         "hit_layer": hit_layer,
@@ -415,10 +434,13 @@ def _render_markdown(payload: Dict[str, Any]) -> str:
         f"- Gap rows with sandbox box seed: `{opp['gap_rows_with_sandbox_box_seed']['count']}/{opp['gap_rows_with_sandbox_box_seed']['denominator']}` "
         f"({_pct(opp['gap_rows_with_sandbox_box_seed']['rate'])})"
     )
-    lines.append(
-        f"- Gap rows ranked top5: `{opp['gap_rows_ranked_top5']['count']}/{opp['gap_rows_ranked_top5']['denominator']}` "
-        f"({_pct(opp['gap_rows_ranked_top5']['rate'])})"
-    )
+    if opp["gap_rows_ranked_top5"].get("evaluable") is False:
+        lines.append("- Gap rows ranked top5: `NOT_EVALUABLE` (`INVALID_STATIC_ORDER`).")
+    else:
+        lines.append(
+            f"- Gap rows ranked top5: `{opp['gap_rows_ranked_top5']['count']}/{opp['gap_rows_ranked_top5']['denominator']}` "
+            f"({_pct(opp['gap_rows_ranked_top5']['rate'])})"
+        )
     lines.append("")
     if frontier["signature_counts"]:
         lines.append("## 5. Frontier Corroboration")
@@ -443,7 +465,7 @@ def _render_markdown(payload: Dict[str, Any]) -> str:
     for row in examples["candidate_supported_hits"]:
         lines.append(
             f"  - `{row['date']}` `{row['state']}` `{row['period']}` winner `{row['winner']}` "
-            f"rank=`{row['board_rank']}` sig=`{row['arena_final_candidate_signature']}` "
+            f"sig=`{row['arena_final_candidate_signature']}` "
             f"boxlike=`{row['arena_box_signal'] or row['sandbox_box_seed'] or row['arena_primary_box']}` "
             f"vtlike=`{row['sandbox_vt_seed'] or row['arena_primary_vt']}`"
         )
@@ -451,7 +473,7 @@ def _render_markdown(payload: Dict[str, Any]) -> str:
     for row in examples["opportunity_gap_examples"]:
         lines.append(
             f"  - `{row['date']}` `{row['state']}` `{row['period']}` winner `{row['winner']}` "
-            f"rank=`{row['board_rank']}` arena_box=`{row['arena_box_signal']}` sandbox_box=`{row['sandbox_box_seed']}`"
+            f"arena_box=`{row['arena_box_signal']}` sandbox_box=`{row['sandbox_box_seed']}`"
         )
     lines.append("")
     lines.append("## 7. Practical Read")
