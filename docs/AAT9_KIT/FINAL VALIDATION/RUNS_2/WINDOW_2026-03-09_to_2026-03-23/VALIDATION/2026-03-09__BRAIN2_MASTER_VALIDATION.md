@@ -8,6 +8,14 @@ Relationship to the arena-era workflow:
 - Per-state Master Validation template: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
 - Translation sandbox template: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_TRANSLATION_SANDBOX_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`
 
+## Rank Integrity Warning
+
+**RANK INTEGRITY STATUS: `INVALID_STATIC_ORDER`**
+
+Current board rank fields are legacy, state-order-dominated priority receipts. They must not be interpreted as an evidence-derived analytical ranking.
+
+Capture@K, top-ranked-state, and rank-performance conclusions are `NOT_EVALUABLE` until Phase 2 supplies an explicit valid analytical-rank contract.
+
 ## Scope
 - Results date (D): `2026-03-09`
 - History workbook date (H): `2026-03-08`
@@ -20,7 +28,10 @@ Relationship to the arena-era workflow:
 - Board spillover overlay: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/ANALYSIS_ARENA/2026-03-09__BOARD_SPILLOVER_OVERLAY__analysis_arena_day_review.md` / `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/ANALYSIS_ARENA/2026-03-09__BOARD_SPILLOVER_OVERLAY__analysis_arena_day_review.json`
 - Shadow DPL: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/ANALYSIS_ARENA/2026-03-09__SHADOW_DECISION_POLICY__analysis_arena_day_review.md` / `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/ANALYSIS_ARENA/2026-03-09__SHADOW_DECISION_POLICY__analysis_arena_day_review.json`
 - Translation sandbox day manifest: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/ANALYSIS_ARENA/2026-03-09__TRANSLATION_SANDBOX_SEED__analysis_arena_day_review.md` / `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/ANALYSIS_ARENA/2026-03-09__TRANSLATION_SANDBOX_SEED__analysis_arena_day_review.json`
-- Control Center root: `sharepacks/2026-03-09/control_center`
+- Predictive Control Center root: `sharepacks/_predictive/2026-03-09/control_center`
+- Truth/evaluation Control Center root: `sharepacks/2026-03-09/control_center`
+- Predictive source integrity: `PASS` result_fields_inert=`True`
+- Truth/evaluation receipts available: _none available_
 - Control-arm grade directory: `docs/AAT9_KIT/FINAL VALIDATION/RUNS`
 - Window doubles inventory: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/VALIDATION/2026-03-09_to_2026-03-23__DOUBLES_MIRROR_DOUBLES__INVENTORY.md` / `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/VALIDATION/2026-03-09_to_2026-03-23__DOUBLES_MIRROR_DOUBLES__INVENTORY.csv`
 
@@ -32,7 +43,7 @@ Relationship to the arena-era workflow:
 - Board verdict highest_context_support_state: `NorthCarolina4`
 - Shadow DPL play states: _none_
 - Shadow DPL watch states: `Connecticut4`, `Delaware4`, `Florida4`, `Indiana4`, `Michigan4`, `NewJersey4`, `NewYork4`, `NorthCarolina4`, `Ohio4`, `OntarioCanada4`, `Pennsylvania4`, `PuertoRico4`, `SouthCarolina4`, `Virginia4`
-- Daily doubles / mirror doubles detected: _none detected_
+- Daily doubles / mirror doubles detected: ``Delaware4` `Midday` winner=`884` type=`double` rank=`2` mirror_pairs=`-``, ``Florida4` `Evening` winner=`941` type=`mirror_double` rank=`3` mirror_pairs=`4/9``, ``Florida4` `Midday` winner=`383` type=`double` rank=`3` mirror_pairs=`3/8``, ``Michigan4` `Evening` winner=`116` type=`double` rank=`5` mirror_pairs=`1/6``, ``Michigan4` `Midday` winner=`373` type=`double` rank=`5` mirror_pairs=`-``, ``NewJersey4` `Midday` winner=`617` type=`mirror_double` rank=`6` mirror_pairs=`1/6``, ``NewYork4` `Midday` winner=`900` type=`double` rank=`7` mirror_pairs=`-``, ``NorthCarolina4` `Evening` winner=`000` type=`triple` rank=`8` mirror_pairs=`-``, ``NorthCarolina4` `Midday` winner=`855` type=`double` rank=`8` mirror_pairs=`-``, ``Ohio4` `Evening` winner=`664` type=`double` rank=`9` mirror_pairs=`-``, ``Ohio4` `Midday` winner=`848` type=`double` rank=`9` mirror_pairs=`-``, ``OntarioCanada4` `Evening` winner=`559` type=`double` rank=`10` mirror_pairs=`-``, ``Pennsylvania4` `Evening` winner=`966` type=`double` rank=`11` mirror_pairs=`-``, ``Pennsylvania4` `Midday` winner=`040` type=`double` rank=`11` mirror_pairs=`-``, ``PuertoRico4` `Evening` winner=`419` type=`mirror_double` rank=`12` mirror_pairs=`4/9``, ``PuertoRico4` `Midday` winner=`887` type=`double` rank=`12` mirror_pairs=`-``, ``SouthCarolina4` `Evening` winner=`505` type=`double` rank=`13` mirror_pairs=`0/5``, ``SouthCarolina4` `Midday` winner=`455` type=`double` rank=`13` mirror_pairs=`-``, ``Virginia4` `Evening` winner=`188` type=`double` rank=`14` mirror_pairs=`-``
 
 ---
 
@@ -40,7 +51,8 @@ Relationship to the arena-era workflow:
 
 Auto-captured anchors:
 - board scope states: `Connecticut4`, `Delaware4`, `Florida4`, `Indiana4`, `Michigan4`, `NewJersey4`, `NewYork4`, `NorthCarolina4`, `Ohio4`, `OntarioCanada4`, `Pennsylvania4`, `PuertoRico4`, `SouthCarolina4`, `Virginia4`
-- full-day tracker artifacts: `sharepacks/2026-03-09/control_center/profit_alerts.csv`, `sharepacks/2026-03-09/control_center/profit_compound_events.csv`, `sharepacks/2026-03-09/control_center/blackapple_alerts.csv`, `sharepacks/2026-03-09/control_center/due_doubles.csv`, `sharepacks/2026-03-09/control_center/vtrac_repeat_watch.csv`
+- frozen predictive tracker artifacts: `sharepacks/_predictive/2026-03-09/control_center/profit_alerts.csv`, `sharepacks/_predictive/2026-03-09/control_center/profit_compound_events.csv`, `sharepacks/_predictive/2026-03-09/control_center/blackapple_alerts.csv`, `sharepacks/_predictive/2026-03-09/control_center/due_doubles.csv`, `sharepacks/_predictive/2026-03-09/control_center/vtrac_repeat_watch.csv`
+- post-result evaluation root (kept separate): `sharepacks/2026-03-09/control_center`
 - sharepack remains the frozen raw day snapshot; board artifacts are derived arena-era receipts on top of it
 
 Analyst conclusion:
@@ -52,7 +64,7 @@ Analyst conclusion:
 
 Auto-captured anchors:
 - top scoreboard anchors: `#1 Connecticut4` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-rich` canonicals=`168, 189, 006`; `#2 Delaware4` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-strong` canonicals=`006, 129, 259`; `#3 Florida4` role=`shared_host` bucket=`small_shoulder` tracker=`tracker-strong` canonicals=`224, 778, 889`
-- daily doubles / mirror doubles on the day: _none_
+- daily doubles / mirror doubles on the day: ``Delaware4` `Midday` winner=`884` type=`double` rank=`2` mirror_pairs=`-``, ``Florida4` `Evening` winner=`941` type=`mirror_double` rank=`3` mirror_pairs=`4/9``, ``Florida4` `Midday` winner=`383` type=`double` rank=`3` mirror_pairs=`3/8``, ``Michigan4` `Evening` winner=`116` type=`double` rank=`5` mirror_pairs=`1/6``, ``Michigan4` `Midday` winner=`373` type=`double` rank=`5` mirror_pairs=`-``, ``NewJersey4` `Midday` winner=`617` type=`mirror_double` rank=`6` mirror_pairs=`1/6``, ``NewYork4` `Midday` winner=`900` type=`double` rank=`7` mirror_pairs=`-``, ``NorthCarolina4` `Evening` winner=`000` type=`triple` rank=`8` mirror_pairs=`-``, ``NorthCarolina4` `Midday` winner=`855` type=`double` rank=`8` mirror_pairs=`-``, ``Ohio4` `Evening` winner=`664` type=`double` rank=`9` mirror_pairs=`-``, ``Ohio4` `Midday` winner=`848` type=`double` rank=`9` mirror_pairs=`-``, ``OntarioCanada4` `Evening` winner=`559` type=`double` rank=`10` mirror_pairs=`-``, ``Pennsylvania4` `Evening` winner=`966` type=`double` rank=`11` mirror_pairs=`-``, ``Pennsylvania4` `Midday` winner=`040` type=`double` rank=`11` mirror_pairs=`-``, ``PuertoRico4` `Evening` winner=`419` type=`mirror_double` rank=`12` mirror_pairs=`4/9``, ``PuertoRico4` `Midday` winner=`887` type=`double` rank=`12` mirror_pairs=`-``, ``SouthCarolina4` `Evening` winner=`505` type=`double` rank=`13` mirror_pairs=`0/5``, ``SouthCarolina4` `Midday` winner=`455` type=`double` rank=`13` mirror_pairs=`-``, ``Virginia4` `Evening` winner=`188` type=`double` rank=`14` mirror_pairs=`-``
 - direct cross-state receipts surfaced by board verdict: _none_
 
 Analyst conclusion:
@@ -96,11 +108,12 @@ Analyst conclusion:
 ## Part E — Aggregate Tracker Inventory
 
 Auto-captured anchors:
-- highest-value alert states: _none_
-- compound-event leaders: _none_
-- Blackapple ALERT states: _none_
-- due-double threshold states (DS>=3): _none_
+- highest-value alert states: `Ohio4` alerts=`10` strength_sum=`36.0` ids=`A01,A04,A05,A08,A11,A12` suggested=`BOX,OVERLAY,STR8_3,STR8_4of8`; `Pennsylvania4` alerts=`7` strength_sum=`24.0` ids=`A01,A04,A05,A08,A10,A12` suggested=`BOX,OVERLAY,STR8_3,STR8_4of8`; `Virginia4` alerts=`6` strength_sum=`22.0` ids=`A01,A04,A05,A08,A10` suggested=`BOX,OVERLAY,STR8_3,STR8_8`; `NewJersey4` alerts=`5` strength_sum=`19.0` ids=`A01,A04,A05,A08,A11` suggested=`BOX,OVERLAY,STR8_3`; `Delaware4` alerts=`4` strength_sum=`16.0` ids=`A04,A05,A10,A11` suggested=`BOX,STR8_3`
+- compound-event leaders: `NewJersey4` `Combined` top_event=`ENGINE_GOV` priority=`85` candidates=`A01,A05,A11`; `Ohio4` `Combined` top_event=`ENGINE_GOV` priority=`85` candidates=`A01,A05,A11`; `Delaware4` `Combined` top_event=`STRAIGHT_GATE` priority=`80` candidates=`A05,A10,A11`; `Indiana4` `Evening` top_event=`CARRY_PERM` priority=`70` candidates=`A04,A05`; `NorthCarolina4` `Combined` top_event=`CARRY_PERM` priority=`70` candidates=`A04,A05`; `OntarioCanada4` `Combined` top_event=`CARRY_PERM` priority=`70` candidates=`A04,A05`
+- Blackapple ALERT states: `Connecticut4` `Combined` BA=`3` examples=`149 167 014`; `Connecticut4` `Evening` BA=`3` examples=`038 056 146`; `Indiana4` `Evening` BA=`3` examples=`027 126 279`; `NorthCarolina4` `Combined` BA=`3` examples=`049 058 247`; `NorthCarolina4` `Evening` BA=`3` examples=`049 058 238`; `NorthCarolina4` `Midday` BA=`3` examples=`134 017 026`; `PuertoRico4` `Combined` BA=`3` examples=`056 146 479`; `Virginia4` `Combined` BA=`3` examples=`156 489 039`
+- due-double threshold states (DS>=3): `Delaware4` DS=`7`; `Pennsylvania4` DS=`4`; `Virginia4` DS=`4`; `Ohio4` DS=`3`
 - repeat-watch exact hits: _none_
+- separate truth/evaluation rows: alerts=`0` compounds=`0` BA=`0` due=`0` repeat=`0`
 
 Analyst conclusion:
 - most important board-scope tracker states: `...`
@@ -111,10 +124,10 @@ Analyst conclusion:
 ## Part F — Profit Alerts And Special Compound Events
 
 Auto-captured anchors:
-- highest-value alert states: _none_
-- top compound-event rows: _none_
-- profit alerts source: `sharepacks/2026-03-09/control_center/profit_alerts.csv`
-- compound events source: `sharepacks/2026-03-09/control_center/profit_compound_events.csv`
+- highest-value alert states: `Ohio4` alerts=`10` strength_sum=`36.0` ids=`A01,A04,A05,A08,A11,A12` suggested=`BOX,OVERLAY,STR8_3,STR8_4of8`; `Pennsylvania4` alerts=`7` strength_sum=`24.0` ids=`A01,A04,A05,A08,A10,A12` suggested=`BOX,OVERLAY,STR8_3,STR8_4of8`; `Virginia4` alerts=`6` strength_sum=`22.0` ids=`A01,A04,A05,A08,A10` suggested=`BOX,OVERLAY,STR8_3,STR8_8`; `NewJersey4` alerts=`5` strength_sum=`19.0` ids=`A01,A04,A05,A08,A11` suggested=`BOX,OVERLAY,STR8_3`; `Delaware4` alerts=`4` strength_sum=`16.0` ids=`A04,A05,A10,A11` suggested=`BOX,STR8_3`
+- top compound-event rows: `NewJersey4` `Combined` top_event=`ENGINE_GOV` priority=`85` candidates=`A01,A05,A11`; `Ohio4` `Combined` top_event=`ENGINE_GOV` priority=`85` candidates=`A01,A05,A11`; `Delaware4` `Combined` top_event=`STRAIGHT_GATE` priority=`80` candidates=`A05,A10,A11`; `Indiana4` `Evening` top_event=`CARRY_PERM` priority=`70` candidates=`A04,A05`; `NorthCarolina4` `Combined` top_event=`CARRY_PERM` priority=`70` candidates=`A04,A05`; `OntarioCanada4` `Combined` top_event=`CARRY_PERM` priority=`70` candidates=`A04,A05`
+- profit alerts source: `sharepacks/_predictive/2026-03-09/control_center/profit_alerts.csv`
+- compound events source: `sharepacks/_predictive/2026-03-09/control_center/profit_compound_events.csv`
 
 Analyst conclusion:
 - most important alert IDs: `...`
@@ -127,9 +140,9 @@ Analyst conclusion:
 ## Part G — Blackapple Board Review
 
 Auto-captured anchors:
-- BA ALERT states: _none_
-- BA WATCH states: _none_
-- Blackapple source: `sharepacks/2026-03-09/control_center/blackapple_alerts.csv`
+- BA ALERT states: `Connecticut4` `Combined` BA=`3` examples=`149 167 014`; `Connecticut4` `Evening` BA=`3` examples=`038 056 146`; `Indiana4` `Evening` BA=`3` examples=`027 126 279`; `NorthCarolina4` `Combined` BA=`3` examples=`049 058 247`; `NorthCarolina4` `Evening` BA=`3` examples=`049 058 238`; `NorthCarolina4` `Midday` BA=`3` examples=`134 017 026`; `PuertoRico4` `Combined` BA=`3` examples=`056 146 479`; `Virginia4` `Combined` BA=`3` examples=`156 489 039`
+- BA WATCH states: `Florida4` `Combined` BA=`2` examples=`036 045 126`; `Indiana4` `Combined` BA=`2` examples=`016 025 027`; `NewJersey4` `Combined` BA=`2` examples=`013 049 058`; `NewYork4` `Combined` BA=`2` examples=`023 059 149`; `NewYork4` `Evening` BA=`2` examples=`019 028 289`; `Ohio4` `Combined` BA=`2` examples=`015 016 045`; `Ohio4` `Evening` BA=`2` examples=`138 237 039`; `Ohio4` `Midday` BA=`2` examples=`049 058 139`
+- Blackapple source: `sharepacks/_predictive/2026-03-09/control_center/blackapple_alerts.csv`
 
 Analyst conclusion:
 - important BA recommendation carries: `...`
@@ -140,9 +153,9 @@ Analyst conclusion:
 ## Part H — Due Doubles Ranked-State Evaluation
 
 Auto-captured anchors:
-- ranked due states reviewed (DS>=3): _none_
-- top due states that converted in-family: _none_
-- due doubles source: `sharepacks/2026-03-09/control_center/due_doubles.csv`
+- ranked due states reviewed (DS>=3): `Delaware4` DS=`7`; `Pennsylvania4` DS=`4`; `Virginia4` DS=`4`; `Ohio4` DS=`3`
+- top due states that converted in-family: _none / truth receipt unavailable_
+- due doubles source: `sharepacks/_predictive/2026-03-09/control_center/due_doubles.csv`
 
 Analyst conclusion:
 - top due states that failed: `...`
@@ -154,8 +167,8 @@ Analyst conclusion:
 ## Part I — All Daily Doubles And Mirror Doubles Evidence Audit
 
 Auto-captured anchors:
-- daily doubles / mirror doubles reviewed: _none_
-- support sources: due-doubles=`sharepacks/2026-03-09/control_center/due_doubles.csv` BA=`sharepacks/2026-03-09/control_center/blackapple_alerts.csv` alerts=`sharepacks/2026-03-09/control_center/profit_alerts.csv`
+- daily doubles / mirror doubles reviewed: `Delaware4` `Midday` winner=`884` type=`double` rank=`2` mirror_pairs=`-`; `Florida4` `Evening` winner=`941` type=`mirror_double` rank=`3` mirror_pairs=`4/9`; `Florida4` `Midday` winner=`383` type=`double` rank=`3` mirror_pairs=`3/8`; `Michigan4` `Evening` winner=`116` type=`double` rank=`5` mirror_pairs=`1/6`; `Michigan4` `Midday` winner=`373` type=`double` rank=`5` mirror_pairs=`-`; `NewJersey4` `Midday` winner=`617` type=`mirror_double` rank=`6` mirror_pairs=`1/6`; `NewYork4` `Midday` winner=`900` type=`double` rank=`7` mirror_pairs=`-`; `NorthCarolina4` `Evening` winner=`000` type=`triple` rank=`8` mirror_pairs=`-`; `NorthCarolina4` `Midday` winner=`855` type=`double` rank=`8` mirror_pairs=`-`; `Ohio4` `Evening` winner=`664` type=`double` rank=`9` mirror_pairs=`-`; `Ohio4` `Midday` winner=`848` type=`double` rank=`9` mirror_pairs=`-`; `OntarioCanada4` `Evening` winner=`559` type=`double` rank=`10` mirror_pairs=`-`; `Pennsylvania4` `Evening` winner=`966` type=`double` rank=`11` mirror_pairs=`-`; `Pennsylvania4` `Midday` winner=`040` type=`double` rank=`11` mirror_pairs=`-`; `PuertoRico4` `Evening` winner=`419` type=`mirror_double` rank=`12` mirror_pairs=`4/9`; `PuertoRico4` `Midday` winner=`887` type=`double` rank=`12` mirror_pairs=`-`; `SouthCarolina4` `Evening` winner=`505` type=`double` rank=`13` mirror_pairs=`0/5`; `SouthCarolina4` `Midday` winner=`455` type=`double` rank=`13` mirror_pairs=`-`; `Virginia4` `Evening` winner=`188` type=`double` rank=`14` mirror_pairs=`-`
+- support sources: due-doubles=`sharepacks/_predictive/2026-03-09/control_center/due_doubles.csv` BA=`sharepacks/_predictive/2026-03-09/control_center/blackapple_alerts.csv` alerts=`sharepacks/_predictive/2026-03-09/control_center/profit_alerts.csv`
 - window doubles inventory: `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/VALIDATION/2026-03-09_to_2026-03-23__DOUBLES_MIRROR_DOUBLES__INVENTORY.md` / `docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/WINDOW_2026-03-09_to_2026-03-23/VALIDATION/2026-03-09_to_2026-03-23__DOUBLES_MIRROR_DOUBLES__INVENTORY.csv`
 
 Analyst conclusion:

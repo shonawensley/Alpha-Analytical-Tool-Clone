@@ -158,6 +158,8 @@ def test_cmd_doubles_inventory_targets_results_and_validation_dirs(tmp_path: Pat
 def test_cmd_brain2_master_validation_writes_tracker_ledger(tmp_path: Path) -> None:
     cmd = _cmd_brain2_master_validation(
         results_date="2026-01-05",
+        predictive_sharepacks_root="sharepacks/_predictive",
+        truth_sharepacks_root="sharepacks",
         analysis_arena_dir=tmp_path / "analysis",
         board_name="analysis_arena_day_review",
         validation_out=tmp_path / "validation" / "2026-01-05__BRAIN2_MASTER_VALIDATION.md",
@@ -168,6 +170,10 @@ def test_cmd_brain2_master_validation_writes_tracker_ledger(tmp_path: Path) -> N
     )
 
     assert cmd[1].endswith("create_brain2_master_validation_run_report.py")
+    assert "--predictive-sharepacks-root" in cmd
+    assert "sharepacks/_predictive" in cmd
+    assert "--truth-sharepacks-root" in cmd
+    assert "--strict-predictive-sources" in cmd
     assert "--out" in cmd
     assert "--out-json" in cmd
     assert str(tmp_path / "validation" / "2026-01-05__BRAIN2_TRACKER_LEDGER.json") in cmd

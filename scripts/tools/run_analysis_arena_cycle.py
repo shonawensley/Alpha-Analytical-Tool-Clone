@@ -316,6 +316,8 @@ def _cmd_day_synthesis(
 def _cmd_brain2_master_validation(
     *,
     results_date: str,
+    predictive_sharepacks_root: str,
+    truth_sharepacks_root: str,
     analysis_arena_dir: Path,
     board_name: str,
     validation_out: Path,
@@ -329,6 +331,11 @@ def _cmd_brain2_master_validation(
         "scripts/tools/create_brain2_master_validation_run_report.py",
         "--date",
         results_date,
+        "--predictive-sharepacks-root",
+        predictive_sharepacks_root,
+        "--truth-sharepacks-root",
+        truth_sharepacks_root,
+        "--strict-predictive-sources",
         "--analysis-arena-dir",
         str(analysis_arena_dir),
         "--board-name",
@@ -2301,6 +2308,8 @@ def main() -> None:
             cmds.append(
                 _cmd_brain2_master_validation(
                     results_date=results_date,
+                    predictive_sharepacks_root=sharepacks_root,
+                    truth_sharepacks_root=truth_sharepacks_root,
                     analysis_arena_dir=analysis_runs_dir,
                     board_name=str(args.board_name or "analysis_arena_day_review"),
                     validation_out=runs_dir / f"{results_date}__BRAIN2_MASTER_VALIDATION.md",
@@ -2476,6 +2485,8 @@ def main() -> None:
                 tail_cmds.append(
                     _cmd_brain2_master_validation(
                         results_date=results_date,
+                        predictive_sharepacks_root=sharepacks_root,
+                        truth_sharepacks_root=truth_sharepacks_root,
                         analysis_arena_dir=analysis_runs_dir,
                         board_name=str(args.board_name or "analysis_arena_day_review"),
                         validation_out=runs_dir / f"{results_date}__BRAIN2_MASTER_VALIDATION.md",

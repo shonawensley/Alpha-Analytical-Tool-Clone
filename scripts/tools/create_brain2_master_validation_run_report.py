@@ -18,13 +18,15 @@ from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
 import json
+import sys
 from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import date as _date
 from datetime import timedelta
 from pathlib import Path
-from typing import Any, Dict, Iterable, List, Sequence
+from typing import Any, Dict, Iterable, List, Mapping, Sequence
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -50,6 +52,50 @@ MIRROR_MAP: Dict[str, str] = {
     "7": "2",
     "8": "3",
     "9": "4",
+}
+
+PREDICTIVE_TRACKER_FILES: dict[str, str] = {
+    "profit_alerts": "profit_alerts.csv",
+    "compound_events": "profit_compound_events.csv",
+    "blackapple": "blackapple_alerts.csv",
+    "due_doubles": "due_doubles.csv",
+    "repeat_watch": "vtrac_repeat_watch.csv",
+}
+
+TRUTH_EVALUATION_FILES: dict[str, str] = {
+    "profit_alerts_graded": "profit_alerts.csv",
+    "profit_alerts_eval": "profit_alerts_eval.csv",
+    "profit_alerts_eval_merged": "profit_alerts_eval_merged.csv",
+    "compound_events_graded": "profit_compound_events.csv",
+    "blackapple_graded": "blackapple_alerts.csv",
+    "due_doubles_graded": "due_doubles.csv",
+    "repeat_watch_graded": "vtrac_repeat_watch.csv",
+}
+
+# Frozen tables retain result-shaped columns for schema compatibility. They must
+# contain placeholders only; populated values indicate predictive/truth mixing.
+PREDICTIVE_RESULT_FIELD_RULES: dict[str, dict[str, tuple[str, ...]]] = {
+    "profit_alerts": {
+        "literal": ("Winner Midday", "Winner Evening"),
+        "collection": ("Midday Hits", "Evening Hits"),
+    },
+    "compound_events": {
+        "count": ("merged_rows_total", "merged_hits"),
+        "boolean": ("merged_any_hit_within_decay",),
+        "collection": ("merged_hit_types", "merged_any_hit_types"),
+    },
+    "blackapple": {
+        "literal": ("Winner Midday", "Winner Evening"),
+        "collection": ("Midday Hits", "Evening Hits"),
+    },
+    "due_doubles": {
+        "literal": ("Winner Midday", "Winner Evening"),
+        "boolean": ("Midday Winner In Family", "Evening Winner In Family"),
+    },
+    "repeat_watch": {
+        "literal": ("Winner", "Winner VTRAC"),
+        "boolean": ("Current==WinnerVTRAC",),
+    },
 }
 
 
@@ -103,11 +149,228 @@ def safe_float(value: Any) -> float | None:
         return None
 
 
+def resolve_repo_path(value: str | Path) -> Path:
+    path = Path(value)
+    return path.resolve() if path.is_absolute() else (REPO_ROOT / path).resolve()
+
+
 def _safe_rel(path: Path) -> str:
     try:
         return str(path.relative_to(REPO_ROOT))
     except ValueError:
         return str(path)
+
+
+def _file_sha256(path: Path) -> str:
+    if not path.is_file():
+        return ""
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _source_receipt(
+    *,
+    path: Path,
+    rows: Sequence[Mapping[str, Any]],
+    claim_class: str,
+    required: bool,
+) -> dict[str, Any]:
+    exists = path.is_file()
+    return {
+        "path": _safe_rel(path),
+        "claim_class": claim_class,
+        "required": required,
+        "available": exists,
+        "row_count": len(rows) if exists else 0,
+        "sha256": _file_sha256(path),
+        "status": "available" if exists else "missing",
+    }
+
+
+def _result_value_is_populated(value: Any, *, field_kind: str) -> bool:
+    text = str(value or "").strip()
+    lowered = text.lower()
+    if field_kind == "literal":
+        return lowered not in {"", "-", "none", "n/a", "?"}
+    if field_kind == "boolean":
+        return lowered not in {"", "-", "0", "false", "no", "n", "none", "n/a", "?"}
+    if field_kind == "count":
+        if lowered in {"", "-", "none", "n/a", "?"}:
+            return False
+        number = safe_float(text)
+        return number is None or number != 0
+    if field_kind == "collection":
+        return lowered not in {"", "-", "[]", "{}", "none", "n/a", "?"}
+    raise ValueError(f"Unsupported result field kind: {field_kind}")
+
+
+def find_predictive_result_leakage(
+    rows_by_source: Mapping[str, Sequence[Mapping[str, Any]]],
+) -> list[dict[str, Any]]:
+    findings: list[dict[str, Any]] = []
+    for source_name, field_rules in PREDICTIVE_RESULT_FIELD_RULES.items():
+        rows = rows_by_source.get(source_name) or []
+        for row_number, row in enumerate(rows, start=2):
+            for field_kind, field_names in field_rules.items():
+                for field_name in field_names:
+                    value = row.get(field_name, "")
+                    if not _result_value_is_populated(value, field_kind=field_kind):
+                        continue
+                    findings.append(
+                        {
+                            "source": source_name,
+                            "row_number": row_number,
+                            "state_key": str(row.get("StateKey") or row.get("state_key") or ""),
+                            "variant": str(row.get("Variant") or row.get("variant") or ""),
+                            "field": field_name,
+                            "value": str(value)[:120],
+                        }
+                    )
+    return findings
+
+
+def _profit_alert_identity(row: Mapping[str, Any]) -> str:
+    state_key = str(row.get("StateKey") or row.get("state_key") or "").strip()
+    variant = str(row.get("Variant") or row.get("variant") or "").strip()
+    alert_id = str(row.get("AlertId") or row.get("alert_id") or "").strip()
+    canonical = str(
+        row.get("Canonical")
+        or row.get("canonical")
+        or row.get("canonical_raw")
+        or ""
+    ).strip()
+    if not all((state_key, variant, alert_id, canonical)):
+        return ""
+    return "|".join((state_key, variant, alert_id, canonical))
+
+
+def build_control_center_source_registry(
+    *,
+    results_date: str,
+    predictive_control_center_dir: Path,
+    truth_control_center_dir: Path,
+    predictive_rows_by_source: Mapping[str, Sequence[Mapping[str, Any]]],
+    truth_rows_by_source: Mapping[str, Sequence[Mapping[str, Any]]],
+    predictive_meta: Mapping[str, Any] | None,
+) -> dict[str, Any]:
+    predictive_meta = predictive_meta or {}
+    predictive_artifacts = {
+        source_name: _source_receipt(
+            path=predictive_control_center_dir / file_name,
+            rows=predictive_rows_by_source.get(source_name) or [],
+            claim_class="frozen_pre_result_definition",
+            required=True,
+        )
+        for source_name, file_name in PREDICTIVE_TRACKER_FILES.items()
+    }
+    truth_artifacts = {
+        source_name: _source_receipt(
+            path=truth_control_center_dir / file_name,
+            rows=truth_rows_by_source.get(source_name) or [],
+            claim_class="post_result_evaluation",
+            required=False,
+        )
+        for source_name, file_name in TRUTH_EVALUATION_FILES.items()
+    }
+    meta_path = predictive_control_center_dir / "meta.json"
+    predictive_meta_receipt = _source_receipt(
+        path=meta_path,
+        rows=[predictive_meta] if meta_path.is_file() else [],
+        claim_class="frozen_pre_result_provenance",
+        required=True,
+    )
+
+    missing_predictive_sources = [
+        name for name, receipt in predictive_artifacts.items() if not receipt["available"]
+    ]
+    if not predictive_meta_receipt["available"]:
+        missing_predictive_sources.append("meta")
+
+    leakage = find_predictive_result_leakage(predictive_rows_by_source)
+    results_file = str(predictive_meta.get("results_file") or "")
+    results_placeholder = "placeholder" in results_file.lower()
+    state_entries = predictive_meta.get("states") if isinstance(predictive_meta.get("states"), list) else []
+    metadata_winners_empty = all(
+        not (row.get("winners") if isinstance(row, dict) else None)
+        for row in state_entries
+    )
+
+    warnings: list[str] = []
+    warnings.extend(f"MISSING_PREDICTIVE_SOURCE:{name}" for name in missing_predictive_sources)
+    if predictive_meta_receipt["available"] and not results_placeholder:
+        warnings.append("PREDICTIVE_RESULTS_FILE_NOT_PLACEHOLDER")
+    if predictive_meta_receipt["available"] and not metadata_winners_empty:
+        warnings.append("PREDICTIVE_META_WINNERS_PRESENT")
+    if leakage:
+        warnings.append("PREDICTIVE_RESULT_FIELDS_POPULATED")
+
+    predictive_profit_ids = {
+        identity
+        for row in predictive_rows_by_source.get("profit_alerts") or []
+        if (identity := _profit_alert_identity(row))
+    }
+    truth_profit_ids = {
+        identity
+        for row in truth_rows_by_source.get("profit_alerts_eval") or []
+        if (identity := _profit_alert_identity(row))
+    }
+    matched_profit_ids = predictive_profit_ids & truth_profit_ids
+    truth_join_status = "not_available"
+    if truth_artifacts["profit_alerts_eval"]["available"]:
+        truth_join_status = "complete" if truth_profit_ids <= predictive_profit_ids else "partial"
+
+    hard_failure_codes: list[str] = []
+    if leakage:
+        hard_failure_codes.append("PREDICTIVE_RESULT_FIELDS_POPULATED")
+    if predictive_meta_receipt["available"] and not results_placeholder:
+        hard_failure_codes.append("PREDICTIVE_RESULTS_FILE_NOT_PLACEHOLDER")
+    if predictive_meta_receipt["available"] and not metadata_winners_empty:
+        hard_failure_codes.append("PREDICTIVE_META_WINNERS_PRESENT")
+    status = "fail" if hard_failure_codes else ("warn" if warnings else "pass")
+    return {
+        "schema_version": "brain2_control_center_source_registry_v1",
+        "results_date": results_date,
+        "predictive": {
+            "root": _safe_rel(predictive_control_center_dir.parent.parent),
+            "control_center_dir": _safe_rel(predictive_control_center_dir),
+            "claim_class": "frozen_pre_result_definition",
+            "meta": {
+                **predictive_meta_receipt,
+                "generated_at_utc": str(predictive_meta.get("generated_at_utc") or ""),
+                "history_date": str(predictive_meta.get("history_date") or ""),
+                "results_file": results_file,
+                "producer_script": str(predictive_meta.get("script") or ""),
+            },
+            "artifacts": predictive_artifacts,
+        },
+        "truth": {
+            "root": _safe_rel(truth_control_center_dir.parent.parent),
+            "control_center_dir": _safe_rel(truth_control_center_dir),
+            "claim_class": "post_result_evaluation",
+            "artifacts": truth_artifacts,
+        },
+        "truth_join": {
+            "profit_alert_identity_fields": ["state_key", "variant", "alert_id", "canonical"],
+            "status": truth_join_status,
+            "predictive_identity_count": len(predictive_profit_ids),
+            "truth_identity_count": len(truth_profit_ids),
+            "matched_identity_count": len(matched_profit_ids),
+            "unmatched_truth_identity_count": len(truth_profit_ids - predictive_profit_ids),
+        },
+        "integrity": {
+            "status": status,
+            "missing_predictive_sources": missing_predictive_sources,
+            "predictive_result_fields_inert": not leakage,
+            "predictive_results_file_is_placeholder": results_placeholder,
+            "predictive_meta_winners_empty": metadata_winners_empty,
+            "result_leakage_findings": leakage,
+            "hard_failure_codes": hard_failure_codes,
+            "warnings": warnings,
+        },
+    }
 
 
 def _normalize_pick3_literal(value: Any) -> str:
@@ -456,6 +719,31 @@ def _daily_double_events(
     return out
 
 
+def _daily_double_events_from_inventory(
+    path: Path | None,
+    *,
+    results_date: str,
+    rank_by_state: Mapping[str, int],
+) -> list[str]:
+    if path is None or not path.is_file():
+        return []
+    out: list[str] = []
+    for row in load_csv_rows(path):
+        if str(row.get("date") or "").strip() != results_date:
+            continue
+        state_key = str(row.get("state") or "").strip()
+        period = str(row.get("period") or "").strip()
+        winner = _normalize_pick3_literal(row.get("winner") or "")
+        event_type = str(row.get("type") or "").strip()
+        if not all((state_key, period, winner, event_type)):
+            continue
+        out.append(
+            f"`{state_key}` `{period}` winner=`{winner}` type=`{event_type}` "
+            f"rank=`{rank_by_state.get(state_key, '-')}` mirror_pairs=`{row.get('mirror_pairs') or '-'}`"
+        )
+    return out
+
+
 def _top_reason_codes(state_decisions: Sequence[dict[str, Any]], *, limit: int = 8) -> list[str]:
     counts: Counter[str] = Counter()
     for row in state_decisions:
@@ -568,19 +856,35 @@ def build_brain2_tracker_ledger(
     blackapple_rows: Sequence[dict[str, str]],
     due_rows: Sequence[dict[str, str]],
     tracker_rows: Sequence[dict[str, str]],
+    truth_profit_alert_rows: Sequence[dict[str, str]],
+    truth_compound_rows: Sequence[dict[str, str]],
+    truth_blackapple_rows: Sequence[dict[str, str]],
+    truth_due_rows: Sequence[dict[str, str]],
+    truth_tracker_rows: Sequence[dict[str, str]],
     translation_learning: dict[str, list[str]],
-    control_center_dir: Path,
+    predictive_control_center_dir: Path,
+    truth_control_center_dir: Path,
+    tracker_source_registry: Mapping[str, Any],
     doubles_inventory_md: Path | None = None,
     doubles_inventory_csv: Path | None = None,
 ) -> dict[str, Any]:
     rank_by_state = _scoreboard_state_rank_map(scoreboard_rows)
     due_threshold_rows = _due_threshold_rows(due_rows)
-    daily_double_events = _daily_double_events(due_rows, rank_by_state=rank_by_state)
+    daily_double_events = _daily_double_events(truth_due_rows, rank_by_state=rank_by_state)
+    if not daily_double_events:
+        daily_double_events = _daily_double_events_from_inventory(
+            doubles_inventory_csv,
+            results_date=results_date,
+            rank_by_state=rank_by_state,
+        )
     repeat_watch_top = _top_repeat_watch_rows(tracker_rows, rank_by_state=rank_by_state)
+    truth_repeat_watch_top = _top_repeat_watch_rows(truth_tracker_rows, rank_by_state=rank_by_state)
     repeat_watch_hits = [
-        row for row in repeat_watch_top if bool(row.get("current_equals_winner_vtrac"))
+        row for row in truth_repeat_watch_top if bool(row.get("current_equals_winner_vtrac"))
     ]
+    predictive_sources = tracker_source_registry.get("predictive", {}).get("artifacts", {})
     return {
+        "schema_version": "brain2_tracker_ledger_v1",
         "metadata": {
             "results_date": results_date,
             "history_date": history_date,
@@ -590,9 +894,23 @@ def build_brain2_tracker_ledger(
                 "shadow_json": _safe_rel(artifacts.shadow_json),
                 "translation_manifest_json": _safe_rel(artifacts.sandbox_json),
             },
-            "control_center_dir": _safe_rel(control_center_dir),
+            "control_center_dir": _safe_rel(predictive_control_center_dir),
+            "predictive_control_center_dir": _safe_rel(predictive_control_center_dir),
+            "truth_control_center_dir": _safe_rel(truth_control_center_dir),
             "doubles_inventory_md": _safe_rel(doubles_inventory_md) if doubles_inventory_md else "",
             "doubles_inventory_csv": _safe_rel(doubles_inventory_csv) if doubles_inventory_csv else "",
+        },
+        "source_registry": dict(tracker_source_registry),
+        "truth_evaluation": {
+            "claim_class": "post_result_evaluation",
+            "profit_alerts_row_count": len(truth_profit_alert_rows),
+            "compound_events_row_count": len(truth_compound_rows),
+            "blackapple_row_count": len(truth_blackapple_rows),
+            "due_doubles_row_count": len(truth_due_rows),
+            "repeat_watch_row_count": len(truth_tracker_rows),
+            "due_doubles_converting_rows": _due_converting_rows(truth_due_rows),
+            "daily_double_events": daily_double_events[:16],
+            "repeat_watch_exact_hits": repeat_watch_hits,
         },
         "board_context": {
             "top_primary_target": board_verdict.get("top_primary_target") or "",
@@ -604,27 +922,31 @@ def build_brain2_tracker_ledger(
             "skip_states": list(shadow_verdict.get("skip_states") or []),
         },
         "profit_alerts": {
-            "available": bool(profit_alert_rows),
+            "available": bool(predictive_sources.get("profit_alerts", {}).get("available")),
             "row_count": len(profit_alert_rows),
+            "source": predictive_sources.get("profit_alerts", {}),
             "top_states": _top_profit_alert_states(profit_alert_rows, rank_by_state=rank_by_state),
             "scoreboard_carries": _scoreboard_hint_rows(scoreboard_rows, hint_key="profit_alert_hint"),
         },
         "compound_events": {
-            "available": bool(compound_rows),
+            "available": bool(predictive_sources.get("compound_events", {}).get("available")),
             "row_count": len(compound_rows),
+            "source": predictive_sources.get("compound_events", {}),
             "top_rows": _top_compound_events(compound_rows, rank_by_state=rank_by_state),
             "scoreboard_carries": _scoreboard_hint_rows(scoreboard_rows, hint_key="compound_event_hint"),
         },
         "blackapple": {
-            "available": bool(blackapple_rows),
+            "available": bool(predictive_sources.get("blackapple", {}).get("available")),
             "row_count": len(blackapple_rows),
+            "source": predictive_sources.get("blackapple", {}),
             "alert_states": _top_blackapple_rows(blackapple_rows, rank_by_state=rank_by_state, status="ALERT"),
             "watch_states": _top_blackapple_rows(blackapple_rows, rank_by_state=rank_by_state, status="WATCH"),
             "scoreboard_carries": _scoreboard_hint_rows(scoreboard_rows, hint_key="blackapple_reco_hint"),
         },
         "due_doubles": {
-            "available": bool(due_rows),
+            "available": bool(predictive_sources.get("due_doubles", {}).get("available")),
             "row_count": len(due_rows),
+            "source": predictive_sources.get("due_doubles", {}),
             "threshold_states": [
                 {
                     "state_key": (row.get("StateKey") or "").strip(),
@@ -633,13 +955,14 @@ def build_brain2_tracker_ledger(
                 }
                 for row in due_threshold_rows[:12]
             ],
-            "converting_rows": _due_converting_rows(due_rows),
+            "converting_rows": _due_converting_rows(truth_due_rows),
             "daily_double_events": daily_double_events[:16],
             "scoreboard_carries": _scoreboard_hint_rows(scoreboard_rows, hint_key="due_double_hint"),
         },
         "repeat_watch": {
-            "available": bool(tracker_rows),
+            "available": bool(predictive_sources.get("repeat_watch", {}).get("available")),
             "row_count": len(tracker_rows),
+            "source": predictive_sources.get("repeat_watch", {}),
             "top_rows": repeat_watch_top,
             "exact_hits": repeat_watch_hits,
         },
@@ -670,12 +993,21 @@ def build_brain2_master_validation_report(
     blackapple_rows: Sequence[dict[str, str]],
     due_rows: Sequence[dict[str, str]],
     tracker_rows: Sequence[dict[str, str]],
+    truth_profit_alert_rows: Sequence[dict[str, str]],
+    truth_compound_rows: Sequence[dict[str, str]],
+    truth_blackapple_rows: Sequence[dict[str, str]],
+    truth_due_rows: Sequence[dict[str, str]],
+    truth_tracker_rows: Sequence[dict[str, str]],
     translation_learning: dict[str, list[str]],
-    control_center_dir: Path,
+    predictive_control_center_dir: Path,
+    truth_control_center_dir: Path,
+    tracker_source_registry: Mapping[str, Any],
     control_arm_runs_dir: Path,
     doubles_inventory_md: Path | None = None,
     doubles_inventory_csv: Path | None = None,
 ) -> str:
+    source_integrity = tracker_source_registry.get("integrity", {})
+    truth_sources = tracker_source_registry.get("truth", {}).get("artifacts", {})
     rank_by_state = _scoreboard_state_rank_map(scoreboard_rows)
     top_rows = _top_scoreboard_rows(scoreboard_rows)
     direct_receipts = board_verdict.get("direct_cross_state_receipts") or []
@@ -690,10 +1022,16 @@ def build_brain2_master_validation_report(
         f"`{row.get('StateKey','')}` DS=`{row.get('Draws Since Double','')}`"
         for row in _due_threshold_rows(due_rows)
     ]
-    daily_double_events = _daily_double_events(due_rows, rank_by_state=rank_by_state)
+    daily_double_events = _daily_double_events(truth_due_rows, rank_by_state=rank_by_state)
+    if not daily_double_events:
+        daily_double_events = _daily_double_events_from_inventory(
+            doubles_inventory_csv,
+            results_date=results_date,
+            rank_by_state=rank_by_state,
+        )
     repeat_hits = [
         f"`{row.get('StateKey','')}` `{row.get('Variant','')}` idx=`{row.get('Current Index','')}`"
-        for row in tracker_rows
+        for row in truth_tracker_rows
         if (row.get("Current==WinnerVTRAC") or "").strip() == "True"
     ]
 
@@ -712,6 +1050,20 @@ def build_brain2_master_validation_report(
     lines.append(f"- Per-state Master Validation template: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_MASTER_VALIDATION_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`")
     lines.append(f"- Translation sandbox template: `docs/AAT9_KIT/FINAL VALIDATION/final docs/AAT9_TRANSLATION_SANDBOX_TEMPLATE__ANALYSIS_ARENA_BRANCH.md`")
     lines.append("")
+    lines.append("## Rank Integrity Warning")
+    lines.append("")
+    lines.append("**RANK INTEGRITY STATUS: `INVALID_STATIC_ORDER`**")
+    lines.append("")
+    lines.append(
+        "Current board rank fields are legacy, state-order-dominated priority receipts. "
+        "They must not be interpreted as an evidence-derived analytical ranking."
+    )
+    lines.append("")
+    lines.append(
+        "Capture@K, top-ranked-state, and rank-performance conclusions are `NOT_EVALUABLE` "
+        "until Phase 2 supplies an explicit valid analytical-rank contract."
+    )
+    lines.append("")
     lines.append("## Scope")
     lines.append(f"- Results date (D): `{results_date}`")
     lines.append(f"- History workbook date (H): `{history_date}`")
@@ -724,7 +1076,19 @@ def build_brain2_master_validation_report(
     lines.append(f"- Board spillover overlay: {_fmt_path(artifacts.overlay_md)} / {_fmt_path(artifacts.overlay_json)}")
     lines.append(f"- Shadow DPL: {_fmt_path(artifacts.shadow_md)} / {_fmt_path(artifacts.shadow_json)}")
     lines.append(f"- Translation sandbox day manifest: {_fmt_path(artifacts.sandbox_md)} / {_fmt_path(artifacts.sandbox_json)}")
-    lines.append(f"- Control Center root: `{_safe_rel(control_center_dir)}`")
+    lines.append(f"- Predictive Control Center root: `{_safe_rel(predictive_control_center_dir)}`")
+    lines.append(f"- Truth/evaluation Control Center root: `{_safe_rel(truth_control_center_dir)}`")
+    lines.append(
+        f"- Predictive source integrity: `{str(source_integrity.get('status') or 'unknown').upper()}` "
+        f"result_fields_inert=`{bool(source_integrity.get('predictive_result_fields_inert'))}`"
+    )
+    lines.append(
+        "- Truth/evaluation receipts available: "
+        + _fmt_list(
+            [name for name, receipt in truth_sources.items() if receipt.get("available")],
+            empty="_none available_",
+        )
+    )
     lines.append(f"- Control-arm grade directory: `{_safe_rel(control_arm_runs_dir)}`")
     if doubles_inventory_md or doubles_inventory_csv:
         lines.append(
@@ -768,7 +1132,8 @@ def build_brain2_master_validation_report(
         "Part A — File Lock And Scope",
         [
             f"board scope states: {_fmt_list(board_scope_states)}",
-            f"full-day tracker artifacts: `{_safe_rel(control_center_dir / 'profit_alerts.csv')}`, `{_safe_rel(control_center_dir / 'profit_compound_events.csv')}`, `{_safe_rel(control_center_dir / 'blackapple_alerts.csv')}`, `{_safe_rel(control_center_dir / 'due_doubles.csv')}`, `{_safe_rel(control_center_dir / 'vtrac_repeat_watch.csv')}`",
+            f"frozen predictive tracker artifacts: `{_safe_rel(predictive_control_center_dir / 'profit_alerts.csv')}`, `{_safe_rel(predictive_control_center_dir / 'profit_compound_events.csv')}`, `{_safe_rel(predictive_control_center_dir / 'blackapple_alerts.csv')}`, `{_safe_rel(predictive_control_center_dir / 'due_doubles.csv')}`, `{_safe_rel(predictive_control_center_dir / 'vtrac_repeat_watch.csv')}`",
+            f"post-result evaluation root (kept separate): `{_safe_rel(truth_control_center_dir)}`",
             "sharepack remains the frozen raw day snapshot; board artifacts are derived arena-era receipts on top of it",
         ],
         [
@@ -837,6 +1202,7 @@ def build_brain2_master_validation_report(
             f"Blackapple ALERT states: {'; '.join(_group_blackapple(blackapple_rows, status='ALERT')) or '_none_'}",
             f"due-double threshold states (DS>=3): {'; '.join(due_threshold[:8]) if due_threshold else '_none_'}",
             f"repeat-watch exact hits: {'; '.join(repeat_hits) if repeat_hits else '_none_'}",
+            f"separate truth/evaluation rows: alerts=`{len(truth_profit_alert_rows)}` compounds=`{len(truth_compound_rows)}` BA=`{len(truth_blackapple_rows)}` due=`{len(truth_due_rows)}` repeat=`{len(truth_tracker_rows)}`",
         ],
         [
             "most important board-scope tracker states: `...`",
@@ -851,8 +1217,8 @@ def build_brain2_master_validation_report(
         [
             f"highest-value alert states: {'; '.join(_group_profit_alerts(profit_alert_rows)) or '_none_'}",
             f"top compound-event rows: {'; '.join(_group_compound_events(compound_rows)) or '_none_'}",
-            f"profit alerts source: `{_safe_rel(control_center_dir / 'profit_alerts.csv')}`",
-            f"compound events source: `{_safe_rel(control_center_dir / 'profit_compound_events.csv')}`",
+            f"profit alerts source: `{_safe_rel(predictive_control_center_dir / 'profit_alerts.csv')}`",
+            f"compound events source: `{_safe_rel(predictive_control_center_dir / 'profit_compound_events.csv')}`",
         ],
         [
             "most important alert IDs: `...`",
@@ -869,7 +1235,7 @@ def build_brain2_master_validation_report(
         [
             f"BA ALERT states: {'; '.join(_group_blackapple(blackapple_rows, status='ALERT')) or '_none_'}",
             f"BA WATCH states: {'; '.join(_group_blackapple(blackapple_rows, status='WATCH')) or '_none_'}",
-            f"Blackapple source: `{_safe_rel(control_center_dir / 'blackapple_alerts.csv')}`",
+            f"Blackapple source: `{_safe_rel(predictive_control_center_dir / 'blackapple_alerts.csv')}`",
         ],
         [
             "important BA recommendation carries: `...`",
@@ -883,8 +1249,8 @@ def build_brain2_master_validation_report(
         "Part H — Due Doubles Ranked-State Evaluation",
         [
             f"ranked due states reviewed (DS>=3): {'; '.join(due_threshold) if due_threshold else '_none_'}",
-            f"top due states that converted in-family: {'; '.join(_due_converting_rows(due_rows)) or '_none_'}",
-            f"due doubles source: `{_safe_rel(control_center_dir / 'due_doubles.csv')}`",
+            f"top due states that converted in-family: {'; '.join(_due_converting_rows(truth_due_rows)) or '_none / truth receipt unavailable_'}",
+            f"due doubles source: `{_safe_rel(predictive_control_center_dir / 'due_doubles.csv')}`",
         ],
         [
             "top due states that failed: `...`",
@@ -899,7 +1265,7 @@ def build_brain2_master_validation_report(
         "Part I — All Daily Doubles And Mirror Doubles Evidence Audit",
         [
             f"daily doubles / mirror doubles reviewed: {'; '.join(daily_double_events) if daily_double_events else '_none_'}",
-            f"support sources: due-doubles=`{_safe_rel(control_center_dir / 'due_doubles.csv')}` BA=`{_safe_rel(control_center_dir / 'blackapple_alerts.csv')}` alerts=`{_safe_rel(control_center_dir / 'profit_alerts.csv')}`",
+            f"support sources: due-doubles=`{_safe_rel(predictive_control_center_dir / 'due_doubles.csv')}` BA=`{_safe_rel(predictive_control_center_dir / 'blackapple_alerts.csv')}` alerts=`{_safe_rel(predictive_control_center_dir / 'profit_alerts.csv')}`",
             f"window doubles inventory: {(' / '.join(x for x in (_fmt_path(doubles_inventory_md) if doubles_inventory_md else '', _fmt_path(doubles_inventory_csv) if doubles_inventory_csv else '') if x)) if (doubles_inventory_md or doubles_inventory_csv) else '_not provided_'}",
         ],
         [
@@ -995,6 +1361,21 @@ def main() -> None:
         help="Board artifact suffix/name (default: analysis_arena_day_review)",
     )
     ap.add_argument(
+        "--predictive-sharepacks-root",
+        default="sharepacks/_predictive",
+        help="Root containing frozen pre-result sharepacks (default: sharepacks/_predictive)",
+    )
+    ap.add_argument(
+        "--truth-sharepacks-root",
+        default="sharepacks",
+        help="Root containing optional post-result evaluation sharepacks (default: sharepacks)",
+    )
+    ap.add_argument(
+        "--strict-predictive-sources",
+        action="store_true",
+        help="Fail when any required frozen tracker source or its meta.json is missing.",
+    )
+    ap.add_argument(
         "--out",
         help="Output Markdown path (default: docs/AAT9_KIT/FINAL VALIDATION/RUNS_2/<D>__BRAIN2_MASTER_VALIDATION.md)",
     )
@@ -1014,6 +1395,8 @@ def main() -> None:
 
     results_date = parse_iso_date(args.date).isoformat()
     analysis_arena_dir = Path(args.analysis_arena_dir)
+    predictive_sharepacks_root = resolve_repo_path(args.predictive_sharepacks_root)
+    truth_sharepacks_root = resolve_repo_path(args.truth_sharepacks_root)
     out_path = Path(args.out) if args.out else (RUNS2_DIR / f"{results_date}__BRAIN2_MASTER_VALIDATION.md")
     default_json_name = (
         out_path.name.replace("__BRAIN2_MASTER_VALIDATION.md", "__BRAIN2_TRACKER_LEDGER.json")
@@ -1025,20 +1408,23 @@ def main() -> None:
         if args.out_json
         else out_path.with_name(default_json_name)
     )
-    control_arm_runs_dir = Path(args.control_arm_runs_dir)
-    doubles_inventory_md = Path(args.doubles_inventory_md) if args.doubles_inventory_md else None
-    doubles_inventory_csv = Path(args.doubles_inventory_csv) if args.doubles_inventory_csv else None
+    control_arm_runs_dir = resolve_repo_path(args.control_arm_runs_dir)
+    doubles_inventory_md = resolve_repo_path(args.doubles_inventory_md) if args.doubles_inventory_md else None
+    doubles_inventory_csv = resolve_repo_path(args.doubles_inventory_csv) if args.doubles_inventory_csv else None
 
     if out_path.exists() and not args.force:
         raise SystemExit(f"Output already exists: {out_path}. Use --force to overwrite.")
 
     artifacts = _analysis_artifacts(analysis_arena_dir, results_date=results_date, board_name=args.board_name)
-    control_center_dir = REPO_ROOT / "sharepacks" / results_date / "control_center"
-    meta_path = control_center_dir / "meta.json"
+    predictive_control_center_dir = predictive_sharepacks_root / results_date / "control_center"
+    truth_control_center_dir = truth_sharepacks_root / results_date / "control_center"
+    meta_path = predictive_control_center_dir / "meta.json"
     history_date = (parse_iso_date(results_date) - timedelta(days=1)).isoformat()
+    meta: dict[str, Any] = {}
     if meta_path.exists():
-        meta = read_json(meta_path)
-        if isinstance(meta, dict):
+        loaded_meta = read_json(meta_path)
+        if isinstance(loaded_meta, dict):
+            meta = loaded_meta
             history_date = str(meta.get("history_date") or history_date)
 
     scoreboard = read_json(artifacts.scoreboard_json) if artifacts.scoreboard_json.exists() else {}
@@ -1058,11 +1444,48 @@ def main() -> None:
     state_decisions = shadow.get("state_decisions") if isinstance(shadow, dict) else []
     state_decisions = state_decisions if isinstance(state_decisions, list) else []
 
-    profit_alert_rows = load_csv_rows(control_center_dir / "profit_alerts.csv")
-    compound_rows = load_csv_rows(control_center_dir / "profit_compound_events.csv")
-    blackapple_rows = load_csv_rows(control_center_dir / "blackapple_alerts.csv")
-    due_rows = load_csv_rows(control_center_dir / "due_doubles.csv")
-    tracker_rows = load_csv_rows(control_center_dir / "vtrac_repeat_watch.csv")
+    predictive_rows_by_source = {
+        source_name: load_csv_rows(predictive_control_center_dir / file_name)
+        for source_name, file_name in PREDICTIVE_TRACKER_FILES.items()
+    }
+    truth_rows_by_source = {
+        source_name: load_csv_rows(truth_control_center_dir / file_name)
+        for source_name, file_name in TRUTH_EVALUATION_FILES.items()
+    }
+    tracker_source_registry = build_control_center_source_registry(
+        results_date=results_date,
+        predictive_control_center_dir=predictive_control_center_dir,
+        truth_control_center_dir=truth_control_center_dir,
+        predictive_rows_by_source=predictive_rows_by_source,
+        truth_rows_by_source=truth_rows_by_source,
+        predictive_meta=meta,
+    )
+    source_integrity = tracker_source_registry["integrity"]
+    if source_integrity["hard_failure_codes"]:
+        raise SystemExit(
+            "Predictive tracker source failed result-leakage safeguards: "
+            + ", ".join(source_integrity["hard_failure_codes"])
+            + "; findings="
+            + json.dumps(source_integrity["result_leakage_findings"][:5], sort_keys=True)
+        )
+    if args.strict_predictive_sources and source_integrity["missing_predictive_sources"]:
+        raise SystemExit(
+            "Missing required predictive tracker sources: "
+            + ", ".join(source_integrity["missing_predictive_sources"])
+        )
+    for warning in source_integrity["warnings"]:
+        print(f"WARNING: {warning}", file=sys.stderr)
+
+    profit_alert_rows = predictive_rows_by_source["profit_alerts"]
+    compound_rows = predictive_rows_by_source["compound_events"]
+    blackapple_rows = predictive_rows_by_source["blackapple"]
+    due_rows = predictive_rows_by_source["due_doubles"]
+    tracker_rows = predictive_rows_by_source["repeat_watch"]
+    truth_profit_alert_rows = truth_rows_by_source["profit_alerts_graded"]
+    truth_compound_rows = truth_rows_by_source["compound_events_graded"]
+    truth_blackapple_rows = truth_rows_by_source["blackapple_graded"]
+    truth_due_rows = truth_rows_by_source["due_doubles_graded"]
+    truth_tracker_rows = truth_rows_by_source["repeat_watch_graded"]
     translation_learning = _load_translation_learning(artifacts.sandbox_json)
 
     report = build_brain2_master_validation_report(
@@ -1081,8 +1504,15 @@ def main() -> None:
         blackapple_rows=blackapple_rows,
         due_rows=due_rows,
         tracker_rows=tracker_rows,
+        truth_profit_alert_rows=truth_profit_alert_rows,
+        truth_compound_rows=truth_compound_rows,
+        truth_blackapple_rows=truth_blackapple_rows,
+        truth_due_rows=truth_due_rows,
+        truth_tracker_rows=truth_tracker_rows,
         translation_learning=translation_learning,
-        control_center_dir=control_center_dir,
+        predictive_control_center_dir=predictive_control_center_dir,
+        truth_control_center_dir=truth_control_center_dir,
+        tracker_source_registry=tracker_source_registry,
         control_arm_runs_dir=control_arm_runs_dir,
         doubles_inventory_md=doubles_inventory_md,
         doubles_inventory_csv=doubles_inventory_csv,
@@ -1100,8 +1530,15 @@ def main() -> None:
         blackapple_rows=blackapple_rows,
         due_rows=due_rows,
         tracker_rows=tracker_rows,
+        truth_profit_alert_rows=truth_profit_alert_rows,
+        truth_compound_rows=truth_compound_rows,
+        truth_blackapple_rows=truth_blackapple_rows,
+        truth_due_rows=truth_due_rows,
+        truth_tracker_rows=truth_tracker_rows,
         translation_learning=translation_learning,
-        control_center_dir=control_center_dir,
+        predictive_control_center_dir=predictive_control_center_dir,
+        truth_control_center_dir=truth_control_center_dir,
+        tracker_source_registry=tracker_source_registry,
         doubles_inventory_md=doubles_inventory_md,
         doubles_inventory_csv=doubles_inventory_csv,
     )
