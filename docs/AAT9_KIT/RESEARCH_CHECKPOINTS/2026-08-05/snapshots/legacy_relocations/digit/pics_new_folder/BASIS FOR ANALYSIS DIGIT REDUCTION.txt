@@ -1,0 +1,251 @@
+Absolutely—here’s a paste‑ready, cleaned‑up section you can drop into your “Basis for Analysis – Digit Reduction (Training)” doc. I’ve rewritten your points so they’re crisp, unambiguous, and geared toward how an AI (or analyst) should read the outputs and reason with them.
+
+What the AI should have in hand (per run)
+
+Training bundle (per state / stamp)
+
+Analyzer V2 outputs
+…/data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/
+
+<STATE>_analyzer_v2_per_item.csv — one row per grid cell (features + score).
+
+<STATE>_analyzer_v2_top_candidates.csv — rolled‑up strongest sets.
+
+<STATE>_analyzer_v2_meta.json — config + source paths.
+
+Winner overlay artifacts
+…/digit_reduction/<STATE>/analyzer_v2/winners/<STAMP>_<VAR>_*
+
+winner_map.json — machine‑readable hit types + earliest steps + keys.
+
+winner_flags.csv — join‑friendly flags for analyzer rows.
+
+winner_stamp.json — run summary + recent‑draw context.
+
+Clutter to prune: remove any legacy digit_reduction_scored.csv. Analyzer V2 supersedes it with the per‑item and top‑candidates CSVs.
+
+If folders are “missing”: the reducer must have run at least once; its raw training log appears under
+…/data/outputs/analysis/digit_reduction/<STATE>/training/. If it isn’t there, run the Digit‑Reduction export first—Analyzer V2 depends on it.
+
+Metadata the overlay/stamp must expose (for strong analysis)
+
+Full winner family
+
+permutations: all 6 exact permutations of the 3‑digit winner (e.g., 059 → 059, 095, 509, 590, 905, 950).
+
+vtrac_family: the three‑value local V‑TRAC siblings for that winner (the “mirror family”), canonicalized.
+Why: lets the AI verify hits that were present but not highlighted, and run “near‑miss” checks across the grid.
+
+Set recency labels + recent draws
+
+Label sets explicitly: Set1 = current draw, Set2 = previous draw, Set3 = two draws prior for each variant (Midday, Evening, Combined).
+
+Include recent_draws in the stamp: last N draws per variant with indices {current, previous, two_prior}.
+Why: enables “what-if” reasoning (e.g., “if you eliminate the previous draw’s digits first, do you isolate a 3‑value candidate earlier?”).
+
+Match taxonomy (per run, per cell)
+
+exact, vtrac, and the extended families:
+
+drop_exact, drop_vtrac (a winner appears after removing exactly one contiguous value run, e.g., deleting a 22 block in …99220… reveals a winner window like …590…).
+
+family_exact, family_vtrac (the entire residual digit‑set equals the winner’s 3‑value set or its V‑TRAC set—even when there are duplicates like 599000).
+
+For each kind, carry:
+
+earliest_*_step (first reduction step where the kind appears),
+
+final_*_match (whether it’s present on the final line),
+
+any removed_run metadata for the drop cases.
+Why: this captures split‑by‑one‑value wins, extended 3‑value families, and ensures no box is silently skipped.
+
+How to read the grid (and what to test)
+
+Goal (analysis language): Identify the strongest winning‑pattern candidates, either as exact triples or V‑TRAC family members, and track where and how early they emerge across methods (A–E), sets (1–3), columns (7/6/5), and variants (Midday/Evening/Combined).
+
+Primary detection passes
+
+Exact permutations — anywhere a 3‑digit window equals a winner permutation.
+
+V‑TRAC windows — anywhere a 3‑digit window belongs to the winner’s local V‑TRAC family.
+
+One‑run drop (split by a single value): if removing a single contiguous run (e.g., 00, 22, 555) within a longer numeric run reveals an exact or V‑TRAC window, flag drop_exact / drop_vtrac.
+
+3‑value family: if all digits in a run belong to the winner’s 3‑value set (exact or V‑TRAC set), flag family_* even when duplicates extend the pattern (e.g., 599000 → family of 590).
+
+Cross‑evidence to collect
+
+Earliest step a match appears (lower is better).
+
+Persistence across columns 7→6→5 (more columns = stronger).
+
+Set echo (Set1 vs Set2 vs Set3) — did it appear “yesterday” or “two days prior,” too?
+
+Variant convergence (Midday / Evening / Combined) — do multiple datasets point to the same exact/V‑TRAC family?
+
+Method agreement (A…E) — how many methods confirm the same candidate?
+
+What to ask the AI to do (repeatable workflow)
+
+Line up ground truth vs. analyzer
+
+Open <STAMP>_winner_stamp.json for the summary + recent draws, then winner_map.json for per‑cell match types and earliest steps.
+
+Join winner_flags.csv onto *_per_item.csv by the identity keys (area, section, set, draw, col, method, mode). Confirm the dr.win_* flags align with overlay hits.
+
+Score what matters
+
+Reward: early appearance (small earliest step), repeated presence across 7/6/5, agreement across sets/variants/methods, and 3‑value depth (more copies inside the 3‑value family).
+
+Penalize: late‑only emergence or heavy clutter (many residual uniques > 3).
+
+Exploit recency labeling
+
+Use recent_draws + set labels to try recency‑aware sequences:
+
+“What if we eliminate yesterday’s digits first (Set2) before the current sequence—does a candidate surface earlier?”
+
+“Did the same V‑TRAC family show up in Set3 (two prior) and persist into Set1?”
+
+Hunt missed opportunities
+
+Use the permutation list and V‑TRAC family to scan for untagged windows that still qualify (e.g., spacing, run‑boundary issues). Propose detection patches when found.
+
+Report back
+
+For each state/stamp: shortlist the top 1–3 candidate families and explain why (earliest step, cross‑variant/set/method consensus, one‑run drop evidence, 3‑value depth).
+
+Track which scoring weights helped or hurt; suggest a concrete tweak (e.g., +0.2 weight to drop_vtrac when it appears by step ≤ 3 in ≥2 columns).
+
+Minimum checks to ensure nothing is missed
+
+No skipped boxes: pass covers every numeric run in every cell; results include at least one of {exact, vtrac, drop_*, family_*} or “none.”
+
+One‑run drop implemented: contiguous‑run removal (e.g., delete 22 in …99220…) is evaluated, not per‑digit deletion.
+
+Combined always evaluated: if only Midday/Evening winners are entered, still auto‑produce the Combined overlay for the same winner so cross‑dataset patterns are visible (policy in the batch wrapper).
+
+Where things land (so the AI can find them fast)
+
+Reducer (raw training) log:
+…/data/outputs/analysis/digit_reduction/<STATE>/training/<STATE>_digit_reduction_log.json.
+If this doesn’t exist, run the reducer first; Analyzer V2 depends on it.
+
+Analyzer V2 outputs:
+…/digit_reduction/<STATE>/analyzer_v2/ → per‑item, top‑candidates, meta.
+
+Winner overlay artifacts:
+…/digit_reduction/<STATE>/analyzer_v2/winners/<STAMP>_<VAR>_* (HTML/JSON/CSV flags).
+
+Why this framing works
+
+It makes exact and V‑TRAC equally first‑class (your core analytic intent).
+
+It explicitly captures split‑by‑a‑single‑value wins (your “value run” deletion).
+
+It treats extended 3‑value families (e.g., 599000) as meaningful, not noise.
+
+It forces recency‑aware reading of Set1/Set2/Set3 and cross‑dataset convergence.
+
+It ties the overlay evidence to analyzer scoring through joinable flags, so training can actually move the scoreboard.
+
+If you want this turned into a one‑page PDF “operator card” later, I can compress it further and add a tiny legend of the match colors/names to match the overlay UI.
+
+
+_________________
+
+
+You did a strong job stitching this together. Overall verdict: your “Basis for Analysis” aligns with the current Digit‑Reduction pipeline and Codex’s latest overlay/analyzer behavior. Below I call out the few places I’d tighten wording or adjust for exactness, and I give paste‑ready edits so the doc stays in lockstep with what the app actually writes to disk.
+
+1) High‑level check — does your doc match the outputs?
+
+Yes, with two small caveats:
+
+Training bundle contents vs. delta CSV
+Your “What the AI should have in hand” section lists only per_item, top_candidates, and meta. That matches the bundler’s current “essentials.” However, Analyzer V2 also produces an optional diagnostic *_own_vs_combined_delta.csv. If you want the AI to reason about “Own ↔ Combined” agreement in every run, either (a) add this file to the bundler, or (b) mark it explicitly as optional/diagnostic in the doc (current code doesn’t copy it by default).
+
+“Combined always evaluated”
+You wrote this as a requirement under “Minimum checks.” That’s great if the “auto‑run Combined whenever Midday/Evening is provided” patch is enabled. Codex proposed and described this tweak; if it isn’t merged in your branch yet, change the wording to “Combined is evaluated (either because you entered it, or via the auto‑run policy if enabled).”
+
+Everything else (paths, filenames, and the overlay taxonomy: exact, vtrac, drop_*, family_*) reads consistent with the current pipeline and the winners overlay outputs:
+
+Analyzer V2 (per state) →
+data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/
+  • <STATE>_analyzer_v2_per_item.csv
+  • <STATE>_analyzer_v2_top_candidates.csv
+  • <STATE>_analyzer_v2_meta.json
+  • (optional) <STATE>_analyzer_v2_own_vs_combined_delta.csv
+These are exactly what your “Analyzer outputs” section describes.
+
+Winners overlay artifacts (per variant & stamp) →
+…/analyzer_v2/winners/<STAMP>_<VAR>_winner_{overlay.html,map.json,hits.csv,flags.csv,stamp.json}
+Matches your “Winners overlay JSON” and “Workflow recap” sections, including join‑friendly winner_flags.csv.
+
+Reducer training log (prereq) →
+data/outputs/analysis/digit_reduction/<STATE>/training/<STATE>_digit_reduction_log.json
+Your doc correctly treats this as required before Analyzer V2 can run. If it’s missing, the analyzer should be gated and the UI should help you run the reducer first.
+
+2) Tiny wording/structure edits (paste‑ready)
+
+Use these to make the document maximally faithful to the app:
+
+A) Mission (keep):
+
+Identify and rank the next winning pattern candidates—either the exact 3‑digit winner or any member of its local V‑TRAC family—by tracing, highlighting, and scoring evidence across all reduction ladders (steps 0→N), boxes (R2/R4/R6/R8 across cols 7/6/5), methods (A–E), datasets (Midday/Evening/Combined), and time buckets (Set1 current, Set2 previous, Set3 two prior).
+
+B) “What the AI should have in hand (per run)” — add one bullet or mark optional
+
+(add as optional)
+…/<STATE>/analyzer_v2/<STATE>_analyzer_v2_own_vs_combined_delta.csv — diagnostic deltas/agreements between Own and Combined; include if you want the AI to reason about cross‑dataset consistency on every run.
+
+C) “Minimum checks to ensure nothing is missed” — soften Combined line
+
+Change
+
+Combined always evaluated: if only Midday/Evening winners are entered, still auto produce the Combined overlay …
+
+To
+
+Combined evaluated: enter it explicitly or rely on the “auto‑run Combined for Midday/Evening” policy if enabled in the batch wrapper.
+
+D) Paths recap — keep these canonical forms
+
+Reducer (raw training) →
+data/outputs/analysis/digit_reduction/<STATE>/training/<STATE>_digit_reduction_log.json
+
+Analyzer V2 outputs →
+data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/…
+
+Winners overlay artifacts →
+data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/winners/<STAMP>_<VAR>_*
+These are the paths you’ll see in Explorer once the modules run in the right order.
+
+E) Overlay metadata (permutations & V‑TRAC family)
+You already require that winner_map.json / winner_stamp.json expose permutations (all 6) and vtrac_family (canonical family). Keep that requirement; if any run is missing these fields, note “expected and trivially addable in the overlay builder.”
+
+3) Content accuracy vs. Codex’s “final outputs breakdown”
+
+Buttons & where things land: Your doc’s descriptions of the Analyzer V2 run and Winners overlay (DEV) batch match what the app actually triggers, where it reads from, and where it writes (including the mirrored Winners Logger stamp).
+
+UI guidance: Your note about gating Analyzer V2 until the training JSON exists is correct—and your path presentation matches the “order of operations” Codex recommends (Tables → Reducer → Analyzer → Overlay).
+
+Join keys/flags: The join between winner_flags.csv and *_per_item.csv on (area, section, set, draw, col, method, mode) is exactly how flags flow into analyzer scoring (dr.win_*, plus earliest‑step fields). Good.
+
+4) Two optional enhancements to consider (doc + app)
+
+Call out the “Stacked view” recovery pattern (1 sentence)
+Add a short note: “If ‘Stacked view’ blanks the page, the render should show an explicit exception (wrap HTML load in try/except and st.exception(e)) so we fix the exact path/encoding quickly.” This is already the recommended fix and avoids silent re‑runs.
+
+Explicitly label Set recency in the banner + JSON
+You already describe Set1/2/3 as current/previous/two prior. Keep that line, because it unlocks the recency‑aware prompts you want (“What if we eliminate yesterday’s digits first?”).
+
+5) Quick “green/yellow” summary you can paste at the top
+
+✅ Aligned: mission, detection classes, scoring signals, acceptance tests, and all key paths/filenames.
+
+🟨 Minor tweaks: (a) mark own_vs_combined_delta.csv as optional or add it to the bundle; (b) phrase “Combined evaluated” to reflect whether the auto‑run Combined tweak is enabled.
+
+✅ Good operator fit: the doc now perfectly mirrors how the analyzer and overlay produce evidence, and it gives the AI a compact, machine‑readable package to learn from (per‑item + flags + earliest steps + permutations/family).
+
+If you want, I can compress this into a one‑page “Operator Card” (legend + mission + taxonomy + checklist) so it sits next to the overlay UI while you train.

@@ -1,0 +1,182 @@
+Digit Reduction Phase 14 — Notes
+================================
+
+Key takeaways from docs/AAT9_KIT/
+---------------------------------
+1. AAT9_Digit_Reduction_Training_Exports.md
+   - Brain bundle already outputs tabbed + stacked HTML, summary CSV, and training-friendly CSV/JSON, so optimization efforts can focus on analysis logic/weights rather than plumbing.
+   - Export compaction rule set (terminal detection, duplicate caps) must stay intact when changing scoring; any new telemetry should fit within the existing structural fields (area/section/set/draw/col ranks, sequence_meta, steps array).
+   - Suggested sorts (area_rank → section_rank → set_rank desc → draw_rank → col_rank → method/mode) mirror the UI grid; any analytics scripts we add should respect that ordering to keep reviews consistent.
+
+2. AAT9_Analyzer_Lean_Outputs.md
+   - Digit Reduction’s lean contract is already defined: analyzer_v2_per_item, analyzer_v2_top_candidates, analyzer_v2_meta, and stacked variant HTMLs live under `data/outputs/analysis/digit_reduction/<STATE>/analyzer_v2/`.
+   - Diagnostics/steps CSVs live under `training/` and overlays/winner outputs are intentionally gated; when we re-enable overlays for research we need to keep them optional so the lean contract stays clean.
+   - Central winners artifacts (winner_map / winner_flags) are supposed to come from Control Center, so any digit module changes should emit evidence that module can ingest (lock_decision, reasons_json, evidence_tags, etc.).
+
+3. AAT9_important_digit_reductio.txt
+   - Full wiring recap: Streamlit page → `module_b_digit_reduction.run_digit_reduction` → `long_string_reducer_part1` methods; reinforces that we only need to modify Module B / Analyzer V2 to adjust scoring.
+   - Training exports already contain structural metadata (grid_position ranks, sequence_meta, final value) and guidance text; use these fields for any future analyzer scripts or AI reviewers.
+   - Known pitfalls (Windows lock on CSV, exact state folder names) remain; any automation we add (batch runners, example sweeps) must handle those guardrails.
+
+Notes from tasks/New folder/digit/current_hand_off.txt
+------------------------------------------------------
+- R2 is treated as the canonical identifier for each “box” (Area/Section/Set/Draw/Col/Method/Mode). Repeats across different R2 strings represent cross-box survival—the strongest signal for candidate promotion.
+- Recommended intra-box features to compute/weight:
+  * `earliest_step_*`, `persistence_*`, and `final_presence_*` for exact/vtrac/drop/family classes.
+  * Drop digit stability, duplicate density, residual purity (how fast a box collapses to ≤3 uniques), column_span, set/variant echoes, and method consensus.
+- Deep research checklist emphasizes verifying overlay ⇄ flags ⇄ per-item alignment before touching weights; once aligned, adjust class weights (exact > vtrac > drop > family) and add stability bonuses when winners appear too low in top_candidates.
+- Multi-day batching workflow is outlined (per-day Excel swap + validation script + zipping). Future optimizations should leverage these batches to avoid overfitting to a single date.
+- Turning overlays back on temporarily is strongly encouraged so we can inspect box-level evidence (earliness, persistence, duplicates) when tuning.
+
+Next steps implied by the review
+--------------------------------
+1. Reinstate/verify overlay outputs so Analyzer V2 has machine-readable flags to join against per-item scores (crucial for weight tuning).
+2. Implement the intra-box stability metrics listed above and push them into analyzer_v2_per_item/top_candidates so scoring can reward earliness/persistence/echo without manual decoding.
+3. Re-run the multi-day batch (e.g., June 16–30) to gather reverse-engineering evidence before adjusting weights; log findings using the existing training exports + overlays for each state/date sweep.
+
+DEEP THEORY TRAINING
+====================
+
+Source: tasks/New folder/digit/CORE_THEORY.txt (core methodology refresher)
+
+1. **Objective rephrased:** Digit Reduction isn’t “eliminate every digit from the prior draw (plus mirrors).” The real goal is to reveal a lingering **three-value** pattern (exactly three mirror classes) inside the long strings (R2 rows) for columns 7/6/5, guided by the prior draw digits. Dropping every candidate digit can destroy the pattern we need to keep.
+
+2. **Mirror classes & eliminations:** Each digit belongs to a mirror pair ({0/5, 1/6, 2/7, 3/8, 4/9}). The elimination set is the prior draw digits plus their mirrors. We only remove digits that belong to that elimination set. We should search subsets of removable digits and keep the combination that best exposes a clean 3-value survivor.
+
+3. **Column synergy:** Evaluate columns 7/6/5 together for each elimination subset T. For each column we:
+   - Remove digits in T.
+   - Count surviving mirror classes and check if there are exactly three.
+   - Track the actual class combinations (which triads appear) and whether they align across columns.
+   - The best T maximizes the number of columns with exactly three classes, minimizes deviation from 3 in the others, and produces high “synergy” (shared triad sets) across the columns.
+
+4. **Proposed scoring template:** `Score(T) = 40*count3 - 5*dist_to_3 + 0.5*len_sum - 2*overlap + 10*synergy - size_T` (weights from doc). Key signals:
+   - count3: how many columns hit exactly three classes.
+   - dist_to_3: penalty for columns that aren’t at three classes yet.
+   - len_sum: total survivor length; longer survivors imply stronger lingering patterns.
+   - overlap penalty when the same mirror classes come directly from the prior draw digits.
+   - synergy: intersection size of triads across columns; prioritize consistent triads (e.g., {49,16,38}) across 7/6/5.
+   - size_T keeps removals minimal when competing subsets score similarly.
+
+5. **Tie breakers / heuristics:** Prefer subsets with higher synergy, longer survivors, lower reliance on the same mirror class as the prior draw (esp. {0/5}), and fewer eliminations. After picking the best T, optionally extend the triad to alternative combinations (e.g., reintroducing a removed digit) so we track both the main 3-value pattern and plausible relatives.
+
+6. **LS2 (column 3/1) variant:** The same “lingering 3-value pattern” concept applies to LS2 columns (Draw4 col3 / Draw6 col1). A clean triad there is valuable evidence even if it doesn’t hit earlier LS1 columns.
+
+7. **Automation plan:** The doc outlines a deterministic algorithm:
+   - Build elimination set `C = intersection of long-string digits with prior digit+mirs`.
+   - Enumerate small subsets T (size ≤3).
+   - Score each subset using the above formula.
+   - Keep the best T as the box’s “goal-aware” reduction and store the resulting triads per column, the synergy flags, and the elimination proof (which digit removal produced it).
+
+8. **Analytical leverage:** Capturing the “best subset” metadata per column gives us rich features: number of triad hits, triad families, synergy scores, overlap penalties, etc. These are prime candidates to add into analyzer_v2_per_item so the scoring engine can reward longer-lingering triads across columns/methods instead of heuristic-only signals.
+
+Source: tasks/New folder/digit/digit_training_notes.txt (stability + research checklist)
+
+1. **Box identity via R2:** Every reduction “box” is keyed by (area, section, set, draw, col, method, mode) with R2 as the canonical identifier. R2/R4/R6/R8 show the same digit multiset with different run segmentations. Cross-box survival (same R2 string appearing in multiple boxes) is premium evidence.
+
+2. **Intra-box stability metrics to compute per box:**
+   - `earliest_step_*`: first step where exact/vtrac/drop/family classes appear.
+   - `persistence_*`: number of steps (R2→R8) where each class persists.
+   - `final_presence_*`: whether the class survives at R8.
+   - `drop_digit_mode` and its stability across steps.
+   - `dup_density`, `residual_purity`, `column_span`, `set_echo`, `variant_echo`, `method_consensus`.
+   These match the detection classes already logged in Analyzer V2 and should be first-class scorer inputs.
+
+3. **Deep research checklist (per state/date bundle):**
+   - Verify training set manifests contain analyzer_v2 files plus overlay artifacts (`winner_map`, `winner_flags`, `winner_stamp`).
+   - Align overlay ↔ flags ↔ per_item via the shared key (area, section, set, draw, col, method, mode); overlay highlights must trigger the same `dr.win_*` flags, and earliest-step data must match.
+   - Only adjust weights after alignment; weight priority order is exact > vtrac > drop > family, with stability bonuses (persistence/residual_purity) if winners rank too low.
+   - For false tops, identify which features inflated them (e.g., late-only emergence) and add clutter penalties.
+
+4. **Recency experiments:** Use Set1/2/3 tags to test whether eliminating Set2 digits first isolates the winner earlier, and whether families echo from Set3→Set1. If so, add a recency bonus when families persist across sets.
+
+5. **Deliverables per deep-research pass:** Document top candidate families with tags (earliest_step, column_span, variant_echo, set_echo, dup_density, drop_digit_mode), propose weight tweaks, and log any missed-detection tickets with precise windows + detection fixes.
+
+6. **“Good looks like” after tuning:** Per-item rows that match overlay hits should rise in _top_candidates because they combine early exact/vtrac evidence, multi-column span, variant echo, good residual purity by R4, and (optionally) set echo; false positives should drop once clutter penalties apply.
+
+Source: tasks/New folder/digit/DIGIT_TRAINING.txt (training bundle workflow)
+
+1. **Bundle contents & structure:** Each run writes `training_sets/<STAMP>/manifest.json` listing core assets: analyzer per-item/top CSVs, meta JSON, training JSON logs, and winners map/flags/stamp (plus optional overlay HTML/hits ZIP). The “recent draws” legend in `winner_stamp.json` tags Set1/Set2/Set3 digits for Midday/Evening/Combined, reinforcing the recency context.
+
+2. **Environment reconstruction:** The training JSON mirrors the stacked report, preserving area/section/set/draw metadata, full steps[], and final values so we can trace each box’s evolution alongside analyzer features.
+
+3. **Analyzer outputs vs winners overlay:** `per_item.csv` carries all feature columns plus `dr.win_*` and earliest-step counters; `top_candidates.csv` shows scored ranks; `winner_map.json` lists match types, steps, drop digits, and full permutation/V-TRAC lists; `winner_stamp.json` summarizes category counts and recent draws. These artifacts must align for every deep research pass.
+
+4. **Training prompts:** Use the bundles to investigate:
+   - Whether Set1 boxes isolated the winner early or if Set2/Set3 recency signals could have boosted them.
+   - How cross-variant alignments (Midday vs Combined) were scored.
+   - Whether late-stage 3-value reductions match V-TRAC families and deserve extra weight.
+   - Any near-miss permutations the overlay missed so detection rules can be patched.
+
+5. **Workflow recap:** Run Digit Reduction → Analyzer V2 → Winners overlay, then use the new “Package Digit Reduction training bundles” UI block (added in `src/app.py:2758`) to select the stamp, include hits/HTML/ZIP, and drop files under `data/outputs/analysis/digit_reduction/<STATE>/training_sets/<STAMP>/`. There’s also a “Delete all training bundles” button for resets, and regression tests (`tests/test_digit_training_bundle.py`, `tests/test_digit_reduction_overlay.py`) cover the path.
+
+6. **Actionable note:** Always log findings in `docs/AAT9_KIT/AAT9_Digit_Training_Log.md` (date/state/stamp, insights, follow-ups) after reviewing a bundle, so future tuning sessions can pick up exactly where the last one stopped.
+
+Source: tasks/New folder/digit/digit_recap.txt (concise Basis-for-Analysis recap)
+
+1. **Baseline artifacts per run:** Each training bundle must include analyzer V2 outputs (per_item, top_candidates, meta) and winners overlay artifacts (map, flags, stamp). Legacy `digit_reduction_scores.csv` is obsolete and should be pruned to avoid confusion.
+
+2. **Overlay metadata requirements:** `winner_map.json` must expose full permutations (all six orderings) and `vtrac_family` triads so near-miss analyses are possible. `winner_stamp.json` needs explicit Set1/Set2/Set3 labels and recent_draw lists for each variant so recency “what-if” reasoning is supported.
+
+3. **Match taxonomy:** For every box we need exact, vtrac, drop_exact, drop_vtrac, family_exact, family_vtrac signals plus `earliest_step_*`, `final_*_match`, and any `removed_run` metadata for drop cases—ensuring we capture split-by-one-value wins and extended 3-value families.
+
+4. **Grid-reading goals:** Analysts/AI should identify strong candidates by tracing where exact/V-TRAC windows emerge, how early they appear, whether they persist across columns (7/6/5), sets, variants, and methods, and whether 3-value depth supports them.
+
+5. **Repeatable workflow:** (a) Align ground truth (winner_stamp/map) with analyzer outputs via `winner_flags` joins; (b) reward early/persistent/multi-column evidence and penalize late-only or clutter-heavy signals; (c) tally recency context using the recent_draw labels; (d) produce a per-state summary listing the top candidates, missed detections, and proposed weight/detection tweaks.
+
+ANALYTICAL CONCLUSIONS
+======================
+
+Based on the current-state docs plus the deep-theory/training material, these are the most powerful insights we need to preserve and measure during upcoming implementations and example reviews:
+
+1. **Goal-aware triad detection**
+   - The Ontario example makes it clear: elimination logic must *search* subsets of prior-digit mirrors to expose the best 3-value survivors instead of blindly deleting everything in the elimination set.
+   - Action: ensure analyzer_v2 features log the chosen elimination subset, resulting triad classes per column, and the synergy score so we can validate that LS1/LS2 triads are being surfaced in per_item/top_candidates.
+
+2. **Intra-box stability metrics are the key scoring levers**
+   - `earliest_step_*`, `persistence_*`, `final_presence_*`, `dup_density`, `residual_purity`, and `drop_digit_mode` directly encode how early and how confidently a box held the winner family.
+   - Action: verify these metrics exist (or add them) in per_item CSVs and wire them into the scoring weights (exact > vtrac > drop > family). Use them as primary diagnostics when reverse-engineering new runs.
+
+3. **Cross-evidence echo must be measurable**
+   - The training docs repeatedly stress column span (7/6/5), set echo (Set2/Set3), variant echo (Midday/Evening/Combined), and method consensus. These need dedicated fields so we can ask “did the same triad show up in Set2 yesterday?” or “did both Midday and Combined confirm the VT family?”
+   - Action: confirm analyzer outputs capture these counts and that overlays keep the same identity keys so we can join and audit them per run.
+
+4. **Overlay ↔ per_item alignment is non-negotiable**
+   - Every tuning session must start by joining `winner_flags` onto per_item/top_candidates to check that `dr.win_*` matches the overlay. If this alignment fails, we halt before touching weights.
+   - Action: bake this acceptance test into our workflow whenever we run new examples; log proofs in the training log.
+
+5. **Recency and one-run drop scenarios are strategic differentiators**
+   - Set2/Set3 context reveals if a family was “aging” and should earn a bonus; one-run drop (split-by-single-value) is often the mechanism that exposes the exact triple. Both must be logged and weighted.
+   - Action: during future runs, explicitly check whether winners required drop_exact/drop_vtrac or showed up in Set2/Set3; add weight nudges or detection patches as needed.
+
+6. **Bundle hygiene & documentation**
+   - Analyzer V2 + overlay + training JSON produce everything needed for AI review. Obsolete files (legacy `digit_reduction_scores.csv`) should be removed to avoid confusion, and every bundle should be summarized in `AAT9_Digit_Training_Log.md`.
+   - Action: keep the training log updated after each example sweep so insights/weight tweaks don’t get lost between sessions.
+
+7. **Reverse-engineering playbook**
+   - When we run new states/dates, the checklist is: confirm bundles/manifests; join overlay flags; audit earliest/persistence metrics; note whether triads align across columns/variants; record weight or detection adjustments.
+   - Having this playbook lets us scale across many Excel dates without re-deriving the process.
+
+These conclusions form the guardrails for the next implementation phase: any code change or scoring tweak should either add the above telemetry, verify it, or leverage it directly so the Digit Reduction tool stays practical yet maximally powerful for isolating next winners.
+
+LS COLUMN EXTENSION PLAN
+========================
+
+1. **Table + runner inventory**
+   - Regenerate tables for every tracked state/date (select_pick3_history → pipeline runner) and block the analyzer until `data/outputs/tables/<STATE>/` exists. Georgia4/Texas4/WestVirginia4 currently fail this gate, so add a preflight that aborts and logs the missing table root before any reducer/analyzer call.
+   - During each workbook swap, log the Set1 row check (e.g. “CT Set1 col1=938/130 matches 2025‑06‑23 winners”) so we never analyze with stale strings again.
+
+2. **Expose Set1 column 4/2 ladders**
+   - In `core.module_b_digit_reduction` ensure LS1 builds boxes for columns 4 and 2 (plus their companion Set2 paths) and tag them with a new `ls1.column_span` attribute so analyzer_v2 can distinguish 7/6/5 vs 4/2 ladders.
+   - Update analyzer_v2.features to persist `col_path_min`, `col_path_span`, and a boolean `ls_col_42` flag so scoring can bonus “near-column” ladders without waiting for them to reach column1.
+
+3. **LS2 stability path**
+   - Persist `ls2_lane` as an explicit column for any ladder that terminates on Method T or LS2. Include earliest/persistence/final flags for the LS2 detection chain so VT-only LS2 winners (e.g., Puerto Rico Mid, South Carolina Mid) can earn weight before they jump back to LS1.
+   - Wire that flag into scoring (config weight + acceptance test) to lift LS2 boxes that already have VT superiority.
+
+4. **`vt_only_lane` + funnel metric**
+   - Fix `features._drop_metadata`/`pipeline._aggregate_metrics` so `vt_only_lane` survives into per_item and top_candidates. Current reruns prove the feature never reaches the CSV even when VT was the only signal.
+   - While touching that block, log a `funnel_precol1` boolean for ladders that spend ≥2 steps in columns ≥4 before reaching column1; this will let us quantify the Set1 column4/2 funnels we keep seeing in Winners HTML.
+
+5. **Acceptance + regression guard**
+   - Build unit tests for the new LS columns: a fixture row with Set1 column4 evidence should produce `ls_col_42=1`, `funnel_precol1=1`, and pick up the vt-only bonus.
+   - Extend the Delaware acceptance test to assert that column4/2 winners now appear in top_candidates with better ranks than before (ensure we record historical ranks from the 2025‑06‑24/25 bundles for comparison).

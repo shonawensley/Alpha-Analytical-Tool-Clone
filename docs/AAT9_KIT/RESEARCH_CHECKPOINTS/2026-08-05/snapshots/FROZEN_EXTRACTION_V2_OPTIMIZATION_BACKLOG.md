@@ -1,0 +1,43 @@
+# 2026-03-09 Frozen Extraction V2 Optimization Backlog
+
+Status for every item: `FROZEN_PENDING_EXTERNAL_REVIEW`.
+
+This document preserves the complete proposed improvement set before ChatGPT Pro review. It is a backlog, not an implementation claim. No runtime, template, Analysis Arena, scoring, ranking, or combination-forming behavior was changed while creating it.
+
+## Acceptance Rule
+
+An item may move from frozen backlog to a shadow experiment only when it has a deterministic selector, complete candidate denominator, explicit identity and width, matched V1 baseline, negative control, and holdout plan. Promotion into runtime requires evidence from more than this in-sample Gold Day.
+
+## Frozen Items
+
+| ID | Title | Proposed change | Why it matters | Status |
+| --- | --- | --- | --- | --- |
+| `EZV2-001` | Preserve V1 As The Matched Baseline | Freeze the current 28-case predictive and result-aware artifacts. Every V2 experiment must report matched width, burden, and case coverage against this exact baseline. | Prevents retrospective edits from being mistaken for predictive improvement. | `FROZEN_PENDING_EXTERNAL_REVIEW` |
+| `EZV2-002` | Separate The Four Conversion Stages | Maintain distinct ledgers for string availability, territory selection, AUX reinforcement, and final combination-product formation before outcome evaluation. | Makes the first real loss visible instead of collapsing recognition, ranking, translation, and emission into one miss. | `FROZEN_PENDING_EXTERNAL_REVIEW` |
+| `EZV2-003` | Complete Zone 1, Zone 2, And Zone 3 Candidate Ledgers | Preserve all identity-bearing candidates and coordinates in Zones 1 and 2. Formalize Zone 3 survivor, bridge, maturity, and frontier thresholds without target-conditioned stopping. | The Gold Day shows high territory availability but current top-N compression loses most outcomes. | `FROZEN_PENDING_EXTERNAL_REVIEW` |
+| `EZV2-004` | Use Identity-Specific Ledgers | Keep literal, canonical box, ordered VTRAC lane, boxed-VTRAC index, pair orientation, double family, and positional evidence separate until an explicit typed join. | These relations overlap and cannot be treated as independent votes. | `FROZEN_PENDING_EXTERNAL_REVIEW` |
+| `EZV2-005` | Rank Boxed-VTRAC Territories Explicitly | Produce a complete candidate-symmetric VTRAC index ranking with competitors, support vectors, prevalence, candidate burden, and optional full-index fallback products. | A trapped winning VTRAC neighborhood is a valuable bounded product even when canonical or order resolution remains incomplete. | `FROZEN_PENDING_EXTERNAL_REVIEW` |
+| `EZV2-006` | Add A Pathway-State Tracker | Track each candidate through PRESENT, MATURE, SELECTED, AUX_REINFORCED, TRANSLATED, EMITTED, WITHHELD, DECAY_OPEN, and CONVEYED states with lineage receipts. | Prevents strong available routes from disappearing silently between extraction and final products. | `FROZEN_PENDING_EXTERNAL_REVIEW` |
+| `EZV2-007` | Replace Opaque Score Compression With Merit Vectors | Expose locked verticals, frontier persistence, bridge behavior, cross-variant support, consensus context, reduction survival, AUX roles, prevalence burden, and contradiction flags as separate fields. | Supports rank-depth curves and auditable filters without pretending heterogeneous evidence is calibrated. | `FROZEN_PENDING_EXTERNAL_REVIEW` |
+| `EZV2-008` | Build Typed Translation Bundles | Generate explicit products for VTRAC-to-canonical, canonical-to-order, canonical x ordered-lane, pair-oriented family filtering, and abstention when a bridge is unsupported. | The dominant issue is not raw availability alone; it is loss while translating territory into affordable box and straight products. | `FROZEN_PENDING_EXTERNAL_REVIEW` |
+| `EZV2-009` | Correct Related-VTRAC Pair Orientation | Enumerate every declared front, back, and end-cap orientation and every legal VTRAC-relative alternative before ranking. Never retain only the target-revealed orientation. | Makes advanced straight-pathway analysis candidate-symmetric and testable. | `FROZEN_PENDING_EXTERNAL_REVIEW` |
+| `EZV2-010` | Preserve Three-Permutation Double Products | When a repeated digit plus key digit is selected, retain all three legal straight permutations unless a frozen order selector narrows them. | Avoids discarding the system's strongest repeated-digit advantage during combination formation. | `FROZEN_PENDING_EXTERNAL_REVIEW` |
+| `EZV2-011` | Preserve Qualified Non-Emitted Routes | Create a shadow portfolio for high-merit routes that current gates withhold, including the Florida 383 and Virginia 188 regression cases. | Distinguishes route discovery quality from a faulty emission gate. | `FROZEN_PENDING_EXTERNAL_REVIEW` |
+| `EZV2-012` | Test AUX CORE With Controlled Shadow Arms | Compare string-only, AUX-only, joined, and shuffled-AUX arms at matched width. Keep Positional role-aware for ordering, pair, mirror, contradiction, and VTRAC-territory support. | Measures whether AUX adds real narrowing value instead of post-hoc narrative support. | `FROZEN_PENDING_EXTERNAL_REVIEW` |
+| `EZV2-013` | Apply Board-Prevalence Controls | Measure state-period specificity and down-weight ubiquitous candidates such as 688 and 668 unless independent local evidence exceeds the baseline prevalence burden. | Prevents common candidates from appearing to be state-specific discoveries. | `FROZEN_PENDING_EXTERNAL_REVIEW` |
+| `EZV2-014` | Use Candidate-Qualified Opportunity Labels | Require explicit candidate sets, widths, and evidence thresholds before labels such as HIGH_STRAIGHT_OPPORTUNITY or HIGH_BOX_OPPORTUNITY are actionable. | Opportunity labels must describe a reproducible product, not a broad qualitative environment. | `FROZEN_PENDING_EXTERNAL_REVIEW` |
+| `EZV2-015` | Add Plain-Language Product Labels | Report winning VTRAC territory trapped, actual winning digits in any order, correct VTRAC positional lane, and exact literal straight alongside technical terms. | Keeps analytical meaning clear without changing canonical machine identities. | `FROZEN_PENDING_EXTERNAL_REVIEW` |
+| `EZV2-016` | Instrument The First-Loss Funnel | Count candidate survival and burden at recognition, maturity, territory rank, canonical translation, ordered-lane intersection, AUX join, emission, and decay stages. | Turns the current 1/28 frozen capture result into an actionable conversion diagnosis. | `FROZEN_PENDING_EXTERNAL_REVIEW` |
+| `EZV2-017` | Enforce Renderer And Secondary-Scan Parity | Run candidate-symmetric literal and ordered-VTRAC recognition checks and classify unsupported identities such as 000 explicitly rather than silently coercing them. | Thirteen Gold Day cases contain renderer-versus-secondary-recognition gaps. | `FROZEN_PENDING_EXTERNAL_REVIEW` |
+| `EZV2-018` | Refresh Evening Evidence After Midday | Create a separately labeled post-Midday snapshot before Evening selection and compare it with the current no-refresh control arm. | The current Evening analysis intentionally uses a pre-day snapshot and may omit same-day progression information. | `FROZEN_PENDING_EXTERNAL_REVIEW` |
+| `EZV2-019` | Keep Decay And Carryover Experimental | Rebuild future structural evidence at each offset, cap persistence, preserve physical-event de-duplication, and keep bonus-ball inventory non-crediting until jurisdiction rules are verified. | A bounded carry window is promising but cannot reuse a static winner-aware pathway as if it remained predictive. | `FROZEN_PENDING_EXTERNAL_REVIEW` |
+| `EZV2-020` | Require Holdouts And Negative Controls | Test every selector on additional complete Gold Days with matched-width random controls, shuffled joins, candidate burden, rank-depth efficiency, and untouched holdouts. | March 9 is an in-sample reverse-engineering cohort, not proof of live lift or profitability. | `FROZEN_PENDING_EXTERNAL_REVIEW` |
+| `EZV2-021` | Defer Runtime And Template Promotion | Do not modify Analysis Arena synthesis, template execution, state allocation, scoreboard, bankroll, Profit Horns, or production combination forming until a shadow arm passes acceptance criteria. | Keeps this extraction-zone study separate from the checkpointed template workflow and prevents another broad development detour. | `FROZEN_PENDING_EXTERNAL_REVIEW` |
+
+## Explicitly Out Of Scope
+
+- Retrofitting post-result discoveries into the frozen predictive record.
+- Claiming that the 92.9% result-aware zone territory rate is a predictive hit rate.
+- Treating raw relation rows, variants, or tools as independent votes.
+- Rebuilding the template workflow during extraction-zone V2 design.
+- Implementing profitability, bankroll, state allocation, or live-play policy from one in-sample day.
