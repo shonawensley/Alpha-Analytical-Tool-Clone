@@ -3,6 +3,7 @@ import os
 import pathlib
 import subprocess
 import importlib.util as _importlib_util
+import html as _html
 from collections import defaultdict
 import math
 import copy
@@ -103,6 +104,18 @@ from alpha_analytical.digit_reduction.analyzer_v2 import training_bundle
 from alpha_analytical.digit_reduction.analyzer_v2.training_bundle import TrainingBundleError
 from utils.path_handler import get_tables_output_dir, get_analysis_output_dir
 from core.vtrac_family_ranker import rank_double_families as _core_rank_double_families
+try:
+    from core.classic_due_doubles import (
+        VARIANT_LABELS as _CLASSIC_DUE_VARIANT_LABELS,
+        build_classic_due_doubles_review as _build_classic_due_doubles_review,
+        group_red_box_entries as _group_classic_red_box_entries,
+    )
+    _CLASSIC_DUE_IMPORT_ERROR = None
+except Exception as _classic_due_exc:
+    _CLASSIC_DUE_VARIANT_LABELS = {}
+    _build_classic_due_doubles_review = None
+    _group_classic_red_box_entries = None
+    _CLASSIC_DUE_IMPORT_ERROR = _classic_due_exc
 try:
     from core.aux_config import (
         PAIRS_WINDOW as DEFAULT_PAIRS_WINDOW,
@@ -396,6 +409,115 @@ def _rank_double_families(variant_draws: dict[str, List[str]], limit: int = 5) -
         entry["display"] = f"<b>{entry.get('label')}</b>: " + " ".join(token for _, _, token in tokens)
         entry["tokens"] = tokens
     return rankings[:limit]
+
+
+_CLASSIC_DUE_STYLE = """
+<style>
+.classic-pair {
+    display: inline-block;
+    white-space: nowrap;
+    font-weight: 700;
+}
+.classic-pair-band {
+    display: block;
+    font-size: 0.78em;
+    font-weight: 600;
+}
+.classic-pair-red { color: #b42318; }
+.classic-pair-blue { color: #175cd3; }
+.classic-pair-purple { color: #7a5af8; }
+.classic-pair-top-4 { color: #475467; }
+.classic-red-token, .classic-convergence-token, .classic-closure-token {
+    display: inline-block;
+    margin: 1px 5px 1px 0;
+    white-space: nowrap;
+}
+.classic-red-token {
+    color: #b42318;
+    font-weight: 700;
+}
+.classic-convergence-token {
+    color: #067647;
+    background: #ecfdf3;
+    border: 1px solid #abefc6;
+    border-radius: 999px;
+    padding: 1px 6px;
+    font-weight: 800;
+}
+.classic-closure-token {
+    color: #344054;
+}
+.classic-closure-red {
+    color: #b42318;
+    font-weight: 700;
+}
+</style>
+"""
+
+
+def _render_classic_pair_slot(slot) -> str:
+    band = str(slot.band or "TOP-4")
+    band_class = band.lower().replace(" ", "-")
+    return (
+        f"<span class='classic-pair'>{_html.escape(str(slot.pair))}</span>"
+        f"<span class='classic-pair-band classic-pair-{band_class}'>"
+        f"gap {int(slot.draws_since)} | {_html.escape(band)}</span>"
+    )
+
+
+def _render_classic_red_boxes(entries) -> str:
+    if not entries:
+        return "-"
+    tokens = []
+    grouped = _group_classic_red_box_entries(entries)
+    for combo, badges in grouped:
+        labels = [
+            _CLASSIC_DUE_VARIANT_LABELS.get(
+                {"C": "combined", "M": "midday", "E": "evening"}.get(badge, ""),
+                badge,
+            )
+            for badge in badges
+        ]
+        multi_variant = len(badges) > 1
+        css = "classic-convergence-token" if multi_variant else "classic-red-token"
+        token = f"{combo} {'-'.join(badges)}" if multi_variant else f"{combo}{badges[0]}"
+        title = (
+            f"Multi-variant red convergence: {', '.join(labels)}"
+            if multi_variant
+            else f"Red in {labels[0]}"
+        )
+        tokens.append(
+            f"<span class='{css}' title='{_html.escape(title)}'>"
+            f"{_html.escape(token)}</span>"
+        )
+    return " ".join(tokens)
+
+
+def _render_classic_closure(review) -> str:
+    red_badges = review.red_badges_by_combo
+    tokens = []
+    for combo in review.closure:
+        badges = red_badges.get(combo, ())
+        if len(badges) > 1:
+            css = "classic-convergence-token"
+            token = f"{combo} {'-'.join(badges)}"
+            title = (
+                f"Multi-variant red convergence in {', '.join(badges)}; "
+                "generated from the top four due-pair digits"
+            )
+        elif badges:
+            css = "classic-closure-token classic-closure-red"
+            token = f"{combo}{badges[0]}"
+            title = f"Red in {badges[0]}; generated from the top four due-pair digits"
+        else:
+            css = "classic-closure-token"
+            token = combo
+            title = "Generated from the top four due-pair digits; not independently red"
+        tokens.append(
+            f"<span class='{css}' title='{_html.escape(title)}'>"
+            f"{_html.escape(token)}</span>"
+        )
+    return " ".join(tokens) if tokens else "-"
 
 
 def _percentile(sorted_values: List[int], quantile: float) -> float | None:
@@ -950,6 +1072,8 @@ def show_hot_zones_page(state: str) -> None:
 
 def show_control_center_page() -> None:
     """Render the Control Center page."""
+    from utils import path_handler as _ph
+
     st.title("Control Center")
     st.write("Cross-State Analysis Dashboard")
 
@@ -962,75 +1086,6 @@ def show_control_center_page() -> None:
         else:
             prefix = stem
         return not any(prefix.endswith(sfx) for sfx in _CATEGORY_SUFFIXES)
-
-    _VARIANT_BADGES = {"combined": "C", "midday": "M", "evening": "E"}
-    _RED_COMBO_THRESHOLD = 1000
-
-    def _generate_double_combos() -> tuple[str, ...]:
-        combos = set()
-        digits = "0123456789"
-        for repeated in digits:
-            for other in digits:
-                if other == repeated:
-                    continue
-                combos.add(repeated * 2 + other)
-                combos.add(repeated + other + repeated)
-                combos.add(other + repeated * 2)
-        return tuple(sorted(combos))
-
-    _DOUBLE_COMBOS = _generate_double_combos()
-    _COMBO_SEPARATOR = " - "
-
-    def _double_combo_gaps(draws: List[str]) -> Dict[str, int]:
-        if not draws:
-            return {combo: 0 for combo in _DOUBLE_COMBOS}
-        default_gap = len(draws)
-        gaps = {combo: default_gap for combo in _DOUBLE_COMBOS}
-        for idx, draw in enumerate(draws):
-            value = (draw or "").strip()
-            if len(value) != 3:
-                continue
-            if value in gaps and gaps[value] == default_gap:
-                gaps[value] = idx
-        return gaps
-
-    def _combo_matches_pair(combo: str, pair: str) -> bool:
-        if not combo or not pair or len(pair) != 2:
-            return False
-        if pair[0] != pair[1]:
-            return False
-        value = combo.strip()
-        if len(value) != 3:
-            return False
-        return value.count(pair[0]) == 2 and len(set(value)) == 2
-
-    def _collect_combo_entries(pair: str, badge_maps: Dict[str, Dict[str, int]]) -> List[str]:
-        hits: Dict[str, set[str]] = {}
-        for badge, gap_map in badge_maps.items():
-            for combo, gap in gap_map.items():
-                if gap >= _RED_COMBO_THRESHOLD and _combo_matches_pair(combo, pair):
-                    hits.setdefault(combo, set()).add(badge)
-        formatted: List[str] = []
-        for combo in sorted(hits):
-            badges = "/".join(sorted(hits[combo]))
-            formatted.append(f"{combo} {badges}" if badges else combo)
-        return formatted
-
-    def _format_pair_value(entry: Optional[tuple[str, int]]) -> str:
-        if not entry:
-            return "-"
-        pair, gap = entry
-        try:
-            gap_int = int(gap)
-        except (TypeError, ValueError):
-            return f"{pair} - {gap}"
-        return f"{pair} - {gap_int}"
-
-    def _format_combo_cell(entries: List[str]) -> str:
-        if not entries:
-            return "-"
-        return _COMBO_SEPARATOR.join(entries)
-
 
     # Dev: System Health (Control Center)
     try:
@@ -1795,6 +1850,80 @@ def show_control_center_page() -> None:
         html_table = df_display.to_html(escape=False, index=False)
         st.markdown(_FAMILY_TOKEN_STYLE, unsafe_allow_html=True)
         st.markdown(f"<div style='overflow-x:auto'>{html_table}</div>", unsafe_allow_html=True)
+
+        classic_reviews = cache.get("classic_due_reviews")
+        if classic_reviews is None and callable(_build_classic_due_doubles_review):
+            classic_reviews = []
+            for state_label in states:
+                variant_map = {
+                    variant_key: variant_draws[(state_label, variant_key)]
+                    for _, variant_key in variant_specs
+                    if (state_label, variant_key) in variant_draws
+                }
+                if "combined" not in variant_map:
+                    continue
+                classic_reviews.append(
+                    _build_classic_due_doubles_review(state_label, variant_map)
+                )
+            classic_reviews.sort(key=lambda review: review.state)
+            cache["classic_due_reviews"] = classic_reviews
+
+        st.subheader("Doubles Table #2: Top-4 Due Pairs and Red Boxed Combinations")
+        st.caption(
+            "Pairs are ranked left-to-right from the Combined 360-draw history. "
+            "Red requires a full 1,000-draw C/M/E inventory and each red token appends its source. "
+            "Green groups a box that is red in multiple variants. "
+            "The final closure is generated structure; only highlighted members also qualified red."
+        )
+        if classic_reviews:
+            classic_rows = []
+            for review in classic_reviews:
+                row = {"State": _html.escape(str(review.state))}
+                for rank in range(1, 5):
+                    slot = review.pair_slots[rank - 1] if rank <= len(review.pair_slots) else None
+                    row[f"#{rank} Due Pair"] = _render_classic_pair_slot(slot) if slot else "-"
+                    row[f"#{rank} Red Boxes"] = (
+                        _render_classic_red_boxes(slot.red_boxes) if slot else "-"
+                    )
+                row["Top-4 Due-Pair Boxed Closure"] = _render_classic_closure(review)
+                classic_rows.append(row)
+
+            df_classic = _pd.DataFrame(classic_rows)
+            st.markdown(_CLASSIC_DUE_STYLE, unsafe_allow_html=True)
+            st.markdown(
+                f"<div style='overflow-x:auto'>{df_classic.to_html(escape=False, index=False)}</div>",
+                unsafe_allow_html=True,
+            )
+
+            insufficient = [
+                f"{review.state} {coverage.badge} ({coverage.draws_used})"
+                for review in classic_reviews
+                for coverage in review.coverage
+                if not coverage.red_eligible
+            ]
+            if insufficient:
+                st.warning(
+                    "Red credit withheld for incomplete histories: " + ", ".join(insufficient)
+                )
+
+            with st.expander("Doubles Table #2 draw-source manifest", expanded=False):
+                source_rows = []
+                for review in classic_reviews:
+                    source_row = {"State": review.state}
+                    for variant_key, badge in (("combined", "C"), ("midday", "M"), ("evening", "E")):
+                        key = (review.state, variant_key)
+                        src = variant_sources.get(key)
+                        count = len(variant_draws.get(key, []))
+                        source_row[f"{badge} Source"] = (
+                            f"{src} ({count} draws)" if src else "missing"
+                        )
+                    source_rows.append(source_row)
+                st.dataframe(_pd.DataFrame(source_rows), width="stretch")
+        elif _CLASSIC_DUE_IMPORT_ERROR:
+            st.caption(f"Doubles Table #2 unavailable: {_CLASSIC_DUE_IMPORT_ERROR}")
+        else:
+            st.caption("Doubles Table #2 has no Combined draw histories to review.")
+
         if _cc_get_vtrac_index:
             repeat_rows: list[dict] = []
             for (state_label, variant_key), draws in variant_draws.items():
