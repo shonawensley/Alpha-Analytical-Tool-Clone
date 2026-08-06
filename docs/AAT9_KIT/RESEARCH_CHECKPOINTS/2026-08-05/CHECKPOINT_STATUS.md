@@ -38,4 +38,7 @@ first-loss stages, matched-width controls, and blind/reveal separation.
 The two prior Brain 2 commits were validated and pushed to
 `checkpoint/march-review-packaging-2026-05-10`. This checkpoint work continues
 on `checkpoint/deep-review-extraction-v1-2026-08-05`, created at the same
-protected `ea7cf786` HEAD.
+protected `ea7cf786` HEAD. The preservation-first stabilization sequence is
+pushed through `4a5c05c3`; accepted changes, verification, quarantines, and the
+intentionally deferred dirty inventory are recorded in
+`GIT_STABILIZATION_COMPLETION.md`.

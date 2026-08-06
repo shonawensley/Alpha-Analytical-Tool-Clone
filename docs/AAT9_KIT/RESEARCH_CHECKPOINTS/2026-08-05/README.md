@@ -19,6 +19,7 @@ Template Workflow checkpoint so the two research lanes can later reunite.
 7. [`WORKTREE_AUDIT.md`](WORKTREE_AUDIT.md)
 8. [`BULK_ARTIFACT_POINTERS.tsv`](BULK_ARTIFACT_POINTERS.tsv)
 9. [`SNAPSHOT_SHA256.txt`](SNAPSHOT_SHA256.txt)
+10. [`GIT_STABILIZATION_COMPLETION.md`](GIT_STABILIZATION_COMPLETION.md)
 
 ## Durable Snapshots
 
