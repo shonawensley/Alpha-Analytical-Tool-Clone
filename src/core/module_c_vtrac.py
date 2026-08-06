@@ -40,6 +40,11 @@ from utils.path_handler import (
 )
 from utils.state_utils import STATES, get_state_file_name
 from modules.vtrac_matchers import WinnerTargets, build_winner_targets
+from modules.vtrac_straight_map import (
+    boxed_index_for_vcode,
+    ordered_vcode_for_combo,
+    vstraight_lane_for_combo,
+)
 from modules.vtrac_enhanced.evidence import (
     BoxKey as EvidenceBoxKey,
     build_grid as build_evidence_grid,
@@ -452,6 +457,354 @@ def detect_straight_combinations(df, pattern):
     
     return straight_count
 
+
+_REPORT_VARIANTS = ("Midday", "Evening", "Combined")
+_REPORT_PATTERN_ROWS = frozenset({"R2", "R4", "R6", "R8"})
+_REPORT_NUMERIC_COLUMNS = ("7", "6", "5", "4", "3", "2", "1")
+
+
+def _report_population(df, population):
+    """Return one explicit winner-report row population."""
+    if df is None or df.empty or "RowType" not in df.columns:
+        return df.iloc[0:0].copy() if df is not None else pd.DataFrame()
+    row_types = df["RowType"].astype(str)
+    if population == "r_pattern":
+        return df[row_types.isin(_REPORT_PATTERN_ROWS)].copy()
+    if population == "draw_data":
+        return df[row_types == "draw_data"].copy()
+    raise ValueError(f"Unsupported report population: {population}")
+
+
+def _report_occurrence_details(df, patterns):
+    """Count raw occurrences and unique pattern/cell locations."""
+    ordered_patterns = sorted({str(pattern) for pattern in patterns})
+    occurrence = {pattern: 0 for pattern in ordered_patterns}
+    locations = {pattern: set() for pattern in ordered_patterns}
+    if df is None or df.empty:
+        return occurrence, {pattern: 0 for pattern in ordered_patterns}
+
+    for row_position, (_, row) in enumerate(df.iterrows()):
+        for column in _REPORT_NUMERIC_COLUMNS:
+            if column not in df.columns:
+                continue
+            text = str(row[column])
+            for pattern in ordered_patterns:
+                count = text.count(pattern)
+                if not count:
+                    continue
+                occurrence[pattern] += count
+                locations[pattern].add(
+                    (
+                        row_position,
+                        str(row.get("Set", "")),
+                        str(row.get("Draw", "")),
+                        str(row.get("RowType", "")),
+                        column,
+                    )
+                )
+    return occurrence, {
+        pattern: len(pattern_locations)
+        for pattern, pattern_locations in locations.items()
+    }
+
+
+def _report_population_statistics(df, patterns, population):
+    """Build report-only statistics for one declared row population."""
+    population_df = _report_population(df, population)
+    occurrence, unique_locations = _report_occurrence_details(
+        population_df, patterns
+    )
+    if population_df.empty:
+        persistence = {pattern: 0 for pattern in patterns}
+        straight_counts = {pattern: 0 for pattern in patterns}
+        stability = (
+            {pattern: 0 for pattern in patterns}
+            if population == "r_pattern"
+            else {}
+        )
+    else:
+        persistence = analyze_pattern_persistence(population_df, patterns)
+        straight_counts = {
+            pattern: detect_straight_combinations(population_df, pattern)
+            for pattern in patterns
+        }
+        stability = (
+            analyze_pattern_stability(population_df, patterns)
+            if population == "r_pattern"
+            else {}
+        )
+    if population == "r_pattern":
+        stability_status = "APPLICABLE_R2_R4_R6_R8_ONLY"
+    else:
+        stability_status = "NOT_APPLICABLE_TO_DRAW_DATA"
+
+    return {
+        "population": population,
+        "included_row_types": (
+            sorted(_REPORT_PATTERN_ROWS)
+            if population == "r_pattern"
+            else ["draw_data"]
+        ),
+        "row_count": int(len(population_df.index)),
+        "numeric_cell_count": int(
+            len(population_df.index)
+            * sum(column in population_df.columns for column in _REPORT_NUMERIC_COLUMNS)
+        ),
+        "pattern_occurrence": occurrence,
+        "pattern_occurrence_total": int(sum(occurrence.values())),
+        "pattern_unique_locations": unique_locations,
+        "pattern_unique_location_total": int(sum(unique_locations.values())),
+        "unique_pattern_identities_present": sorted(
+            pattern for pattern, count in occurrence.items() if count
+        ),
+        "pattern_persistence": persistence,
+        "pattern_stability": stability,
+        "pattern_stability_status": stability_status,
+        "straight_counts": straight_counts,
+    }
+
+
+def _aggregate_report_populations(variant_stats, population):
+    """Aggregate variants without claiming independent corroboration."""
+    occurrence = Counter()
+    unique_locations = Counter()
+    variants_present = {}
+    persistence = Counter()
+    stability = Counter()
+    straight_counts = Counter()
+
+    all_patterns = sorted(
+        {
+            pattern
+            for variant in _REPORT_VARIANTS
+            for pattern in variant_stats[variant][population][
+                "pattern_occurrence"
+            ]
+        }
+    )
+    for pattern in all_patterns:
+        present = []
+        for variant in _REPORT_VARIANTS:
+            stats = variant_stats[variant][population]
+            occurrence[pattern] += stats["pattern_occurrence"].get(pattern, 0)
+            unique_locations[pattern] += stats["pattern_unique_locations"].get(
+                pattern, 0
+            )
+            persistence[pattern] += stats["pattern_persistence"].get(pattern, 0)
+            stability[pattern] += stats["pattern_stability"].get(pattern, 0)
+            straight_counts[pattern] += stats["straight_counts"].get(pattern, 0)
+            if stats["pattern_occurrence"].get(pattern, 0):
+                present.append(variant)
+        variants_present[pattern] = present
+
+    return {
+        "population": population,
+        "aggregation": "SUM_ACROSS_SEPARATELY_ATTRIBUTED_VARIANTS",
+        "pattern_occurrence": dict(occurrence),
+        "all_variant_occurrence_total": int(sum(occurrence.values())),
+        "pattern_unique_locations": dict(unique_locations),
+        "all_variant_unique_locations": int(sum(unique_locations.values())),
+        "variants_present": variants_present,
+        "unique_pattern_identities_present": sorted(
+            pattern for pattern, count in occurrence.items() if count
+        ),
+        "pattern_persistence_sum": dict(persistence),
+        "pattern_stability_sum": (
+            dict(stability) if population == "r_pattern" else {}
+        ),
+        "straight_counts_sum": dict(straight_counts),
+        "independence_warning": (
+            "Variant sums are descriptive. Midday, Evening, and Combined are "
+            "related views and do not become independent support merely by "
+            "being added."
+        ),
+    }
+
+
+def build_report_statistics(tables, patterns):
+    """Build explicit per-variant report statistics without changing scoring."""
+    variant_stats = {}
+    for variant in _REPORT_VARIANTS:
+        df = tables.get(f"{variant}_combined")
+        variant_stats[variant] = {
+            population: _report_population_statistics(df, patterns, population)
+            for population in ("r_pattern", "draw_data")
+        }
+
+    combined = tables.get("Combined_combined")
+    if combined is None or combined.empty:
+        legacy = {
+            "pattern_occurrence": {},
+            "pattern_persistence": {},
+            "pattern_stability": {},
+            "straight_counts": {},
+        }
+    else:
+        occurrence, _ = count_patterns_in_table(combined, patterns)
+        legacy = {
+            "pattern_occurrence": occurrence,
+            "pattern_persistence": analyze_pattern_persistence(combined, patterns),
+            "pattern_stability": analyze_pattern_stability(combined, patterns),
+            "straight_counts": {
+                pattern: detect_straight_combinations(combined, pattern)
+                for pattern in patterns
+            },
+        }
+
+    return {
+        "schema_version": "winner_report_statistics_v2",
+        "contract": {
+            "variant_scopes": list(_REPORT_VARIANTS),
+            "row_populations": {
+                "r_pattern": sorted(_REPORT_PATTERN_ROWS),
+                "draw_data": ["draw_data"],
+            },
+            "occurrence_denominator": (
+                "Raw contiguous substring occurrences in numeric cells."
+            ),
+            "unique_location_denominator": (
+                "Unique variant/row/column cells containing each pattern."
+            ),
+            "all_variant_semantics": (
+                "Descriptive sum across separately attributed related variants; "
+                "not independent support or stability."
+            ),
+            "legacy_stats_semantics": (
+                "Combined variant, R-pattern and draw_data rows mixed. Preserved "
+                "for compatibility only."
+            ),
+        },
+        "variants": variant_stats,
+        "all_variant": {
+            population: _aggregate_report_populations(
+                variant_stats, population
+            )
+            for population in ("r_pattern", "draw_data")
+        },
+        "legacy_combined_all_rows": legacy,
+    }
+
+
+def _ordered_lane_locations(df, members, population):
+    population_df = _report_population(df, population)
+    counts = {member: 0 for member in members}
+    locations = []
+    for row_position, (_, row) in enumerate(population_df.iterrows()):
+        for column in _REPORT_NUMERIC_COLUMNS:
+            if column not in population_df.columns:
+                continue
+            raw_value = str(row[column])
+            text = "".join(char for char in raw_value if char.isdigit())
+            for member in members:
+                start = 0
+                while True:
+                    offset = text.find(member, start)
+                    if offset < 0:
+                        break
+                    counts[member] += 1
+                    locations.append(
+                        {
+                            "row_position": row_position,
+                            "set": str(row.get("Set", "")),
+                            "draw": str(row.get("Draw", "")),
+                            "row_type": str(row.get("RowType", "")),
+                            "column": int(column),
+                            "member": member,
+                            "raw_cell": raw_value,
+                            "normalized_cell": text,
+                            "start_offset": offset,
+                        }
+                    )
+                    start = offset + 1
+    return {
+        "member_occurrence": counts,
+        "occurrence_total": int(sum(counts.values())),
+        "unique_location_total": len(
+            {
+                (
+                    location["row_position"],
+                    location["column"],
+                    location["member"],
+                    location["start_offset"],
+                )
+                for location in locations
+            }
+        ),
+        "locations": locations,
+    }
+
+
+def build_ordered_lane_report(winner_combo, tables, legacy_vt_pair=None):
+    """Build a generic modern ordered-lane report for any Pick-3 winner."""
+    vcode = ordered_vcode_for_combo(winner_combo)
+    members = vstraight_lane_for_combo(winner_combo)
+    if not vcode or not members:
+        return {
+            "status": "UNAVAILABLE_INVALID_WINNER",
+            "winner_literal": winner_combo,
+            "ordered_vcode": None,
+            "lane_members": [],
+            "legacy_marker": {
+                "status": "AVAILABLE" if legacy_vt_pair else "UNAVAILABLE",
+                "vt_pair": list(legacy_vt_pair) if legacy_vt_pair else None,
+            },
+        }
+
+    variants = {}
+    for variant in _REPORT_VARIANTS:
+        df = tables.get(f"{variant}_combined")
+        variants[variant] = {
+            population: _ordered_lane_locations(df, members, population)
+            for population in ("r_pattern", "draw_data")
+        }
+
+    all_variant = {}
+    for population in ("r_pattern", "draw_data"):
+        member_counts = Counter()
+        variants_present = []
+        for variant in _REPORT_VARIANTS:
+            stats = variants[variant][population]
+            member_counts.update(stats["member_occurrence"])
+            if stats["occurrence_total"]:
+                variants_present.append(variant)
+        all_variant[population] = {
+            "member_occurrence": dict(member_counts),
+            "all_variant_occurrence_total": int(sum(member_counts.values())),
+            "all_variant_unique_locations": int(
+                sum(
+                    variants[variant][population]["unique_location_total"]
+                    for variant in _REPORT_VARIANTS
+                )
+            ),
+            "variants_present": variants_present,
+            "independence_warning": (
+                "Variant totals are descriptive and are not independent support."
+            ),
+        }
+
+    return {
+        "status": "AVAILABLE",
+        "winner_literal": str(winner_combo),
+        "ordered_vcode": vcode,
+        "boxed_vtrac_index": boxed_index_for_vcode(vcode),
+        "lane_members": members,
+        "counting_contract": {
+            "r_pattern": sorted(_REPORT_PATTERN_ROWS),
+            "draw_data": ["draw_data"],
+            "match": "contiguous literal occurrence in digits-only cell text",
+        },
+        "variants": variants,
+        "all_variant": all_variant,
+        "legacy_marker": {
+            "status": "AVAILABLE" if legacy_vt_pair else "UNAVAILABLE",
+            "vt_pair": list(legacy_vt_pair) if legacy_vt_pair else None,
+            "definition": (
+                "Historical two-distinct-VTRAC run marker. It is preserved but "
+                "is not the modern ordered three-position lane."
+            ),
+        },
+    }
+
 def calculate_index_score(tables: dict, patterns: set) -> float:
     """Compute a combined weighting across Midday, Evening, Combined."""
     if not tables or not patterns:
@@ -575,6 +928,11 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
 
     targets = build_winner_targets(winner_combo or "", patterns)
     evidence_grid = build_evidence_grid(tables).evaluate(targets)
+    report_statistics = build_report_statistics(tables, patterns)
+    ordered_lane_report = build_ordered_lane_report(
+        winner_combo, tables, legacy_vt_pair=targets.vt_pair
+    )
+    legacy_stats = report_statistics["legacy_combined_all_rows"]
 
     html = f"""<!DOCTYPE html>
 <html>
@@ -756,44 +1114,111 @@ def generate_index_html_report(state_name, index, patterns, tables, score, rank,
     # Detailed analysis stats at the bottom
     html += '<div class="stats">'
     html += '<h2>Detailed Analysis Statistics</h2>'
+    html += (
+        "<p><strong>Statistics contract:</strong> Midday, Evening, and Combined "
+        "are reported separately. R2/R4/R6/R8 pattern rows and draw_data rows "
+        "are separate populations. Occurrences and unique locations are separate "
+        "denominators. All-variant totals are descriptive sums, not independent "
+        "support or stability.</p>"
+    )
+
+    html += "<h3>Variant and Population Summary</h3>"
+    html += (
+        "<table><tr><th>Variant</th><th>Population</th><th>Rows</th>"
+        "<th>Occurrences</th><th>Unique Pattern/Cell Locations</th>"
+        "<th>Pattern Identities Present</th></tr>"
+    )
+    for variant in _REPORT_VARIANTS:
+        for population in ("r_pattern", "draw_data"):
+            stats = report_statistics["variants"][variant][population]
+            html += (
+                f"<tr><td>{variant}</td><td>{population}</td>"
+                f"<td>{stats['row_count']}</td>"
+                f"<td>{stats['pattern_occurrence_total']}</td>"
+                f"<td>{stats['pattern_unique_location_total']}</td>"
+                f"<td>{len(stats['unique_pattern_identities_present'])}</td></tr>"
+            )
+    html += "</table>"
+
+    html += "<h3>Ordered Three-Position VTRAC Lane</h3>"
+    if ordered_lane_report["status"] == "AVAILABLE":
+        html += (
+            f"<p>Winner <strong>{ordered_lane_report['winner_literal']}</strong> "
+            f"maps to <strong>{ordered_lane_report['ordered_vcode']}</strong> "
+            f"(boxed index {ordered_lane_report['boxed_vtrac_index']}). "
+            f"Lane members: {' '.join(ordered_lane_report['lane_members'])}.</p>"
+        )
+        html += (
+            "<table><tr><th>Variant</th><th>Population</th>"
+            "<th>Lane Occurrences</th><th>Unique Locations</th></tr>"
+        )
+        for variant in _REPORT_VARIANTS:
+            for population in ("r_pattern", "draw_data"):
+                lane_stats = ordered_lane_report["variants"][variant][population]
+                html += (
+                    f"<tr><td>{variant}</td><td>{population}</td>"
+                    f"<td>{lane_stats['occurrence_total']}</td>"
+                    f"<td>{lane_stats['unique_location_total']}</td></tr>"
+                )
+        html += "</table>"
+    else:
+        html += "<p>Ordered lane unavailable: winner is not an exact Pick-3 literal.</p>"
+    legacy_marker = ordered_lane_report["legacy_marker"]
+    html += (
+        "<p><strong>Legacy two-value marker:</strong> "
+        f"{legacy_marker['status']}. This preserved marker is not the modern "
+        "ordered three-position lane.</p>"
+    )
+
+    html += "<h3>Legacy Combined/All-Row Statistics (Compatibility)</h3>"
+    html += (
+        "<p>These legacy values use the Combined variant only and mix "
+        "R-pattern with draw_data rows. Use the variant/population summary and "
+        "JSON v2 fields for analytical interpretation.</p>"
+    )
     
     # 1. Pattern occurrence counts
-    html += "<h3>Pattern Occurrence Counts</h3>"
+    html += "<h4>Pattern Occurrence Counts</h4>"
     html += "<table><tr><th>Pattern</th><th>Occurrences</th></tr>"
-    if "Combined_combined" in tables:
-        pattern_counts, _ = count_patterns_in_table(tables["Combined_combined"], patterns)
-        for pattern, count in sorted(pattern_counts.items(), key=lambda x: x[1], reverse=True):
-            html += f"<tr><td>{pattern}</td><td>{count}</td></tr>"
+    for pattern, count in sorted(
+        legacy_stats["pattern_occurrence"].items(),
+        key=lambda item: item[1],
+        reverse=True,
+    ):
+        html += f"<tr><td>{pattern}</td><td>{count}</td></tr>"
     html += "</table>"
     
     # 2. Pattern persistence scores
-    html += "<h3>Pattern Persistence Scores</h3>"
+    html += "<h4>Pattern Persistence Scores</h4>"
     html += "<table><tr><th>Pattern</th><th>Persistence Score</th></tr>"
-    if "Combined_combined" in tables:
-        persistence_scores = analyze_pattern_persistence(tables["Combined_combined"], patterns)
-        for pattern, score in sorted(persistence_scores.items(), key=lambda x: x[1], reverse=True):
-            html += f"<tr><td>{pattern}</td><td>{score}</td></tr>"
+    for pattern, stat_score in sorted(
+        legacy_stats["pattern_persistence"].items(),
+        key=lambda item: item[1],
+        reverse=True,
+    ):
+        html += f"<tr><td>{pattern}</td><td>{stat_score}</td></tr>"
     html += "</table>"
     
     # 3. Pattern stability scores
-    html += "<h3>Pattern Stability Scores</h3>"
+    html += "<h4>Pattern Stability Scores</h4>"
     html += "<table><tr><th>Pattern</th><th>Stability Score</th></tr>"
-    if "Combined_combined" in tables:
-        stability_scores = analyze_pattern_stability(tables["Combined_combined"], patterns)
-        for pattern, score in sorted(stability_scores.items(), key=lambda x: x[1], reverse=True):
-            html += f"<tr><td>{pattern}</td><td>{score}</td></tr>"
+    for pattern, stat_score in sorted(
+        legacy_stats["pattern_stability"].items(),
+        key=lambda item: item[1],
+        reverse=True,
+    ):
+        html += f"<tr><td>{pattern}</td><td>{stat_score}</td></tr>"
     html += "</table>"
     
     # 4. Straight combinations
-    html += "<h3>Straight Combination Occurrences</h3>"
+    html += "<h4>Straight Combination Occurrences</h4>"
     html += "<table><tr><th>Pattern</th><th>Straight Occurrences</th></tr>"
-    if "Combined_combined" in tables:
-        straight_counts = {
-            pattern: detect_straight_combinations(tables["Combined_combined"], pattern)
-            for pattern in patterns
-        }
-        for pattern, count in sorted(straight_counts.items(), key=lambda x: x[1], reverse=True):
-            html += f"<tr><td>{pattern}</td><td>{count}</td></tr>"
+    for pattern, count in sorted(
+        legacy_stats["straight_counts"].items(),
+        key=lambda item: item[1],
+        reverse=True,
+    ):
+        html += f"<tr><td>{pattern}</td><td>{count}</td></tr>"
     html += "</table>"
     
     html += '</div>'  # stats
@@ -812,6 +1237,10 @@ def generate_index_json_report(state_name, index, patterns, tables, score, rank,
 
     targets = build_winner_targets(winner_combo or "", patterns)
     evidence_grid = build_evidence_grid(tables).evaluate(targets)
+    report_statistics = build_report_statistics(tables, patterns)
+    ordered_lane_report = build_ordered_lane_report(
+        winner_combo, tables, legacy_vt_pair=targets.vt_pair
+    )
 
     header_cols = ['Set', 'Draw', 'RowType', '7', '6', '5', '4', '3', '2', '1']
     legend = {
@@ -871,31 +1300,8 @@ def generate_index_json_report(state_name, index, patterns, tables, score, rank,
             rows_out.append(row_out)
         return rows_out
 
-    def pattern_occurrence():
-        if "Combined_combined" not in tables:
-            return {}
-        counts, _ = count_patterns_in_table(tables["Combined_combined"], patterns)
-        return counts
-
-    def pattern_persistence():
-        if "Combined_combined" not in tables:
-            return {}
-        return analyze_pattern_persistence(tables["Combined_combined"], patterns)
-
-    def pattern_stability():
-        if "Combined_combined" not in tables:
-            return {}
-        return analyze_pattern_stability(tables["Combined_combined"], patterns)
-
-    def straight_counts():
-        if "Combined_combined" not in tables:
-            return {}
-        return {
-            pattern: detect_straight_combinations(tables["Combined_combined"], pattern)
-            for pattern in patterns
-        }
-
     data = {
+        "report_schema_version": "winner_report_semantics_v2",
         "state": state_name,
         "index": index,
         "winner_combo": winner_combo,
@@ -909,12 +1315,13 @@ def generate_index_json_report(state_name, index, patterns, tables, score, rank,
             "Evening": serialize_table(tables.get("Evening_combined"), "evening", "Evening"),
             "Combined": serialize_table(tables.get("Combined_combined"), "combined", "Combined"),
         },
-        "stats": {
-            "pattern_occurrence": pattern_occurrence(),
-            "pattern_persistence": pattern_persistence(),
-            "pattern_stability": pattern_stability(),
-            "straight_counts": straight_counts(),
+        "statistics_contract": report_statistics["contract"],
+        "stats": report_statistics["legacy_combined_all_rows"],
+        "stats_by_variant": {
+            "variants": report_statistics["variants"],
+            "all_variant": report_statistics["all_variant"],
         },
+        "ordered_vtrac_lane": ordered_lane_report,
     }
     return data
 
@@ -2042,9 +2449,4 @@ def render(state: str) -> None:
 
 if __name__ == "__main__":
     main()
-
-
-
-
-
 

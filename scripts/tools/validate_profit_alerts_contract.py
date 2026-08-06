@@ -208,6 +208,11 @@ def validate_day(d: str, *, sharepacks_root: Path, require_eval: bool) -> Tuple[
         is_promoter = alert_id in PROMOTER_ALERT_IDS or suggested_u in {"OVERLAY", "SKIP"}
         implied_required = suggested_u.startswith("STR8_") or (suggested_u == "BOX" and not is_promoter)
 
+        if implied and any(not is_pick3(x) for x in implied):
+            violations.append(
+                Violation(d, str(idx), state_key, variant, alert_id, "IMPLIED_SET_MEMBER_NOT_PICK3", "")
+            )
+
         if implied_required:
             if implied_err is not None:
                 violations.append(
@@ -215,11 +220,6 @@ def validate_day(d: str, *, sharepacks_root: Path, require_eval: bool) -> Tuple[
                 )
             if not implied:
                 violations.append(Violation(d, str(idx), state_key, variant, alert_id, "MISSING_IMPLIED_SET", ""))
-            else:
-                if any(not is_pick3(x) for x in implied):
-                    violations.append(
-                        Violation(d, str(idx), state_key, variant, alert_id, "IMPLIED_SET_MEMBER_NOT_PICK3", "")
-                    )
 
         if suggested_u == "BOX" and not is_promoter:
             canon_box = canon_box_label(canonical)
@@ -409,4 +409,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

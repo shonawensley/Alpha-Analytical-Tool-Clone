@@ -1,4 +1,39 @@
-# modules/vtrac_straight_map.py
+"""Ordered VTRAC-straight lane reference.
+
+This module owns the ordered STR8_8 lane semantics:
+
+- ``v152`` is a metadata label for one ordered lane.
+- ``VSTRAIGHTS["v152"]`` is the eight playable Pick-3 literals in that lane.
+- ``v152`` itself is never a playable Pick-3 literal.
+
+Boxed VTRAC index/family semantics live in :mod:`modules.vtrac_reference`.
+Keep these concepts separate: a boxed index can contain multiple ordered
+VSTRAIGHTS lanes.
+"""
+
+from __future__ import annotations
+
+import re
+from typing import Any, Dict, Iterable, List, Optional
+
+
+_PICK3_RE = re.compile(r"^\d{3}$")
+_VCODE_RE = re.compile(r"^v[1-5]{3}$", re.IGNORECASE)
+
+_DIGIT_TO_VTRAC: Dict[str, str] = {
+    "0": "1",
+    "5": "1",
+    "1": "2",
+    "6": "2",
+    "2": "3",
+    "7": "3",
+    "3": "4",
+    "8": "4",
+    "4": "5",
+    "9": "5",
+}
+
+
 VSTRAIGHTS = {
     "v111": ["000","005","050","055","500","505","550","555"],
     "v112": ["001","006","051","056","501","506","551","556"],
@@ -126,3 +161,108 @@ VSTRAIGHTS = {
     "v554": ["443","448","493","498","943","948","993","998"],
     "v555": ["444","449","494","499","944","949","994","999"],
 }
+
+
+def normalize_pick3_literal(value: Any) -> Optional[str]:
+    """Return ``value`` only when it is exactly one playable Pick-3 literal."""
+    text = str(value or "").strip()
+    return text if _PICK3_RE.fullmatch(text) else None
+
+
+def normalize_vcode(value: Any) -> Optional[str]:
+    """Return normalized ordered VSTRAIGHTS label such as ``v152``."""
+    text = str(value or "").strip().lower()
+    return text if _VCODE_RE.fullmatch(text) else None
+
+
+def ordered_vcode_for_combo(combo: Any) -> Optional[str]:
+    """Return the ordered VSTRAIGHTS vcode for an exact Pick-3 literal.
+
+    Examples:
+    - ``091`` -> ``v152``
+    - ``019`` -> ``v125``
+    - ``906`` -> ``v512``
+
+    Labels such as ``v125`` are rejected because they are metadata labels, not
+    playable literals.
+    """
+    literal = normalize_pick3_literal(combo)
+    if literal is None:
+        return None
+    return "v" + "".join(_DIGIT_TO_VTRAC[d] for d in literal)
+
+
+def boxed_vkey_for_vcode(vcode: Any) -> Optional[str]:
+    """Return the sorted boxed VTRAC key for an ordered vcode label."""
+    normalized = normalize_vcode(vcode)
+    if normalized is None:
+        return None
+    return "".join(sorted(normalized[1:]))
+
+
+def boxed_index_for_vcode(vcode: Any) -> Optional[int]:
+    """Return boxed VTRAC index for an ordered vcode label."""
+    vkey = boxed_vkey_for_vcode(vcode)
+    if vkey is None:
+        return None
+    from modules.vtrac_reference import INDEX_BY_VTRAC
+
+    idx = INDEX_BY_VTRAC.get(vkey)
+    return int(idx) if idx is not None else None
+
+
+def vstraight_lane_for_vcode(vcode: Any) -> List[str]:
+    """Return the eight playable literals for one ordered VSTRAIGHTS label."""
+    normalized = normalize_vcode(vcode)
+    if normalized is None:
+        return []
+    return list(VSTRAIGHTS.get(normalized, []))
+
+
+def vstraight_lane_for_combo(combo: Any) -> List[str]:
+    """Return the ordered STR8_8 lane for one exact Pick-3 literal."""
+    vcode = ordered_vcode_for_combo(combo)
+    return vstraight_lane_for_vcode(vcode) if vcode else []
+
+
+def vstraight_lanes_for_index(index: Any) -> Dict[str, List[str]]:
+    """Return every ordered VSTRAIGHTS lane belonging to a boxed VTRAC index."""
+    try:
+        target = int(index)
+    except (TypeError, ValueError):
+        return {}
+
+    lanes: Dict[str, List[str]] = {}
+    for vcode in sorted(VSTRAIGHTS):
+        if boxed_index_for_vcode(vcode) == target:
+            lanes[vcode] = list(VSTRAIGHTS[vcode])
+    return lanes
+
+
+def assert_pick3_literals_only(values: Iterable[Any], *, context: str = "values") -> List[str]:
+    """Return strict Pick-3 literals or raise when metadata labels leak in."""
+    out: List[str] = []
+    bad: List[str] = []
+    for value in values:
+        literal = normalize_pick3_literal(value)
+        if literal is None:
+            bad.append(str(value))
+        else:
+            out.append(literal)
+    if bad:
+        raise ValueError(f"{context} must contain only exact 3-digit Pick-3 literals; rejected={bad}")
+    return out
+
+
+__all__ = [
+    "VSTRAIGHTS",
+    "assert_pick3_literals_only",
+    "boxed_index_for_vcode",
+    "boxed_vkey_for_vcode",
+    "normalize_pick3_literal",
+    "normalize_vcode",
+    "ordered_vcode_for_combo",
+    "vstraight_lane_for_combo",
+    "vstraight_lane_for_vcode",
+    "vstraight_lanes_for_index",
+]

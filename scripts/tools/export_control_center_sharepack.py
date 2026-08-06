@@ -34,8 +34,8 @@ import pandas as pd
 from modules.aux_loaders import load_state_draws
 from modules.blackapple import ba_status_label
 from modules.draw_catalog import draws_since_last_double
-from modules.vtrac_reference import INDEX_BY_VTRAC, get_vtrac_index
-from modules.vtrac_straight_map import VSTRAIGHTS
+from modules.vtrac_reference import get_index_set, get_vtrac_index
+from modules.vtrac_straight_map import ordered_vcode_for_combo, vstraight_lane_for_combo, vstraight_lanes_for_index
 from src.core.aux_config import COMBO_DOUBLE_LATE, COMBO_DOUBLE_VERY_LATE
 from src.core.vtrac_families import COMBO_TO_FAMILY
 from src.core.vtrac_family_ranker import rank_double_families
@@ -47,11 +47,6 @@ VARIANT_SPECS: List[Tuple[str, str]] = [
 ]
 VARIANT_ORDER = {key: idx for idx, (_, key) in enumerate(VARIANT_SPECS)}
 VARIANT_BADGES = {"combined": "C", "midday": "M", "evening": "E"}
-
-_INDEX_TO_VCODE: Dict[int, str] = {}
-for _vcode, _idx in INDEX_BY_VTRAC.items():
-    _INDEX_TO_VCODE.setdefault(int(_idx), str(_vcode))
-
 
 def _norm_state(label: str) -> str:
     return "".join(ch for ch in (label or "").lower() if ch.isalpha())
@@ -441,25 +436,17 @@ def _box_family_from_seed(seed: Any) -> Tuple[str, List[str], str]:
     return (canon_box, implied, seed_perm)
 
 
-def _vstraights_for_index(index: Any) -> List[str]:
+def _vtrac_index_corridor(index: Any) -> List[str]:
+    """Return the full boxed-index corridor when no ordered vcode is known."""
     try:
         idx = int(index)
     except Exception:
         return []
-    vcode = _INDEX_TO_VCODE.get(idx)
-    if not vcode:
-        return []
-    return list(VSTRAIGHTS.get(f"v{vcode}", []))
+    return sorted(c for c in get_index_set(idx) if isinstance(c, str) and len(c) == 3 and c.isdigit())
 
 
 def _vstraights_for_combo(combo: Any) -> List[str]:
-    digits = _digits_only(combo)
-    if len(digits) != 3:
-        return []
-    idx = get_vtrac_index(digits)
-    if idx is None:
-        return []
-    return _vstraights_for_index(idx)
+    return vstraight_lane_for_combo(str(combo or "").strip())
 
 
 def _clamp_vstraights(*, vstraights: List[str], orders_modal_value: Any, clamp_size: int) -> List[str]:
@@ -838,12 +825,16 @@ def _build_profit_alerts_df(states: List[SharepackState], *, df_due: pd.DataFram
                 implied_set = _vstraights_for_combo(orders_modal_value)
             else:
                 implied_set = sorted(_permutations3(orders_modal_value or best_a05.get("Canonical") or ""))
+            ordered_vcode = ordered_vcode_for_combo(orders_modal_value) if suggested == "STR8_8" else None
             evidence = {
                 "horiz_span": int(best_a05.get("_hspan") or 0),
                 "orders_modal_value": orders_modal_value,
                 "orders_modal_rows": int(best_a05.get("_orders_rows") or 0),
                 "lane_size": len(implied_set) if implied_set else 0,
             }
+            if ordered_vcode:
+                evidence["ordered_vcode"] = ordered_vcode
+                evidence["vstraight_semantic"] = "ordered_vstraight8"
             evidence.update(_stable_provenance(best_a05))
             rows_out.append(
                 {
@@ -903,8 +894,8 @@ def _build_profit_alerts_df(states: List[SharepackState], *, df_due: pd.DataFram
             r = rep.get(variant_key) or {}
             if int(r.get("current_streak") or 0) >= 2:
                 idx = r.get("current_index")
-                implied_set = _vstraights_for_index(idx) if idx is not None else []
-                vcode = _INDEX_TO_VCODE.get(int(idx)) if idx is not None else None
+                implied_set = _vtrac_index_corridor(idx) if idx is not None else []
+                ordered_lanes = vstraight_lanes_for_index(idx) if idx is not None else {}
                 rows_out.append(
                     {
                         "State": st.aux_state_label,
@@ -912,8 +903,8 @@ def _build_profit_alerts_df(states: List[SharepackState], *, df_due: pd.DataFram
                         "Variant": variant_title,
                         "AlertId": "A09",
                         "Strength": 4,
-                        "Suggested": "STR8_8",
-                        "CapLines": 8,
+                        "Suggested": "VT_INDEX_CORRIDOR",
+                        "CapLines": len(implied_set),
                         "DecayDraws": 1,
                         "Badges": "VTRAC/REP",
                         "Canonical": "-",
@@ -923,8 +914,11 @@ def _build_profit_alerts_df(states: List[SharepackState], *, df_due: pd.DataFram
                                 "current_index": idx,
                                 "vtrac_index": idx,
                                 "current_streak": r.get("current_streak"),
-                                "vcode": f"v{vcode}" if vcode else None,
+                                "vtrac_semantic": "boxed_index_corridor",
+                                "ordered_vcode": None,
+                                "ordered_vcodes_for_index": sorted(ordered_lanes.keys()),
                                 "lane_size": len(implied_set),
+                                "ordered_lane_count": len(ordered_lanes),
                             },
                             separators=(",", ":"),
                         ),
@@ -996,6 +990,7 @@ def _build_profit_alerts_df(states: List[SharepackState], *, df_due: pd.DataFram
                 vstraights = _vstraights_for_combo(orders_modal_value)
                 implied_set = _clamp_vstraights(vstraights=vstraights, orders_modal_value=orders_modal_value, clamp_size=4)
                 if implied_set:
+                    ordered_vcode = ordered_vcode_for_combo(orders_modal_value)
                     evidence = {
                         "order_dominance": round(dom, 3),
                         "orders_modal_value": orders_modal_value,
@@ -1003,6 +998,8 @@ def _build_profit_alerts_df(states: List[SharepackState], *, df_due: pd.DataFram
                         "rowcov": int(best_a12.get("_rowcov") or 0),
                         "clamp_rule": "STR8_4of8:first_digit",
                         "lane_size": len(implied_set),
+                        "ordered_vcode": ordered_vcode,
+                        "vstraight_semantic": "ordered_vstraight8_clamped",
                     }
                     evidence.update(_stable_provenance(best_a12))
                     rows_out.append(

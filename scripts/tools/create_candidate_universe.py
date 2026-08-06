@@ -118,6 +118,12 @@ def _normalize_pick3_literal(value: str) -> str:
     return digits if len(digits) == 3 else ""
 
 
+def _normalize_playable_pick3_literal(value: object) -> str:
+    """Accept only exact playable Pick-3 literals from external candidate arrays."""
+    text = str(value or "").strip()
+    return text if re.fullmatch(r"\d{3}", text) else ""
+
+
 def _canon(draw: str) -> str:
     draw = _normalize_pick3_literal(draw)
     if not draw:
@@ -576,7 +582,8 @@ def _parse_profit_alerts(*, day_dir: Path, state_key: str) -> Tuple[List[dict], 
         if not isinstance(implied, list):
             continue
 
-        combos = sorted({c for c in (_normalize_pick3_literal(x) for x in implied) if c})
+        rejected_implied_values = [str(x) for x in implied if not _normalize_playable_pick3_literal(x)]
+        combos = sorted({c for c in (_normalize_playable_pick3_literal(x) for x in implied) if c})
         if not combos:
             continue
 
@@ -589,6 +596,8 @@ def _parse_profit_alerts(*, day_dir: Path, state_key: str) -> Tuple[List[dict], 
         strength = (r.get("Strength") or "").strip()
         if strength:
             why_tags.append(f"strength:{strength}")
+        if rejected_implied_values:
+            why_tags.append(f"implied_guard_rejected:{len(rejected_implied_values)}")
 
         pack = {
             "pack_id": f"profit_alerts:{variant}:{alert_id}",
@@ -603,6 +612,8 @@ def _parse_profit_alerts(*, day_dir: Path, state_key: str) -> Tuple[List[dict], 
             "transform_chain": [f"profit_alerts:{variant}:{alert_id}:{suggested}:{canonical or '-'}"],
             "evidence_paths": [_safe_rel(path)],
         }
+        if rejected_implied_values:
+            pack["rejected_implied_values"] = rejected_implied_values[:20]
         packs.append(pack)
 
     packs.sort(key=lambda p: p["pack_id"])
