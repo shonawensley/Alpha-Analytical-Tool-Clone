@@ -317,6 +317,21 @@ SET_ORDER      = ["Set3", "Set2", "Set1"]             # visual top ➜ bottom
 DRAW_ORDER     = [f"Draw{i}" for i in range(1, 8)]      # Draw1 … Draw7
 ROWTYPE_ORDER  = ["draw_data", "R2", "R4", "R6", "R8"]
 
+
+def _normalize_table_value(value, row_type):
+    """Normalize draws while preserving the exact length of pattern strings."""
+    if value is None or pd.isna(value):
+        return ""
+    text = str(value).strip()
+    if text.lower() in {"nan", "<na>", "none"}:
+        return ""
+    if text.endswith(".0") and text[:-2].isdigit():
+        text = text[:-2]
+    if row_type == "draw_data" and text.isdigit() and len(text) <= 3:
+        return text.zfill(3)
+    return text
+
+
 def build_combined_table(section_data):
     """Return DataFrame with rows ordered Set3→Set2→Set1 / Draw1→Draw7 / row-types."""
     rows = []
@@ -338,16 +353,9 @@ def build_combined_table(section_data):
                     continue
                 digits = rowtypes[rtype]
 
-                # 1️⃣ canonicalise to zero-padded strings (keep leading zeros)
-                vals = []
-                for x in digits:
-                    if x in (None, "") or pd.isna(x):
-                        vals.append("")
-                    else:
-                        s = str(x).split(".")[0]  # drop trailing .0 if present
-                        if s.isdigit() and len(s) <= 3:
-                            s = s.zfill(3)
-                        vals.append(s)
+                # Draws are fixed-width values. R-patterns are variable-length
+                # reduction strings and must never gain synthetic digits.
+                vals = [_normalize_table_value(x, rtype) for x in digits]
 
                 # 2️⃣ apply hot-/super-hot markers
                 vals = mark_hot_zones(set_name, draw_name, rtype, vals)

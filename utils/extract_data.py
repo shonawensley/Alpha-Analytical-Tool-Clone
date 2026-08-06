@@ -13,6 +13,27 @@ import pandas as pd
 from .path_handler import get_cleaned_data_dir, get_cleaned_state_path
 from .clean_data import STATES
 
+
+def _clean_cell(value):
+    """Return source cell text without converting missing cells to ``"nan"``."""
+    if value is None or pd.isna(value):
+        return ""
+    text = str(value).strip()
+    if text.lower() in {"nan", "<na>", "none"}:
+        return ""
+    if text.endswith(".0") and text[:-2].isdigit():
+        return text[:-2]
+    return text
+
+
+def _format_draw(value):
+    """Normalize actual draw values to three digits; leave missing draws blank."""
+    text = _clean_cell(value)
+    if text.isdigit() and len(text) <= 3:
+        return text.zfill(3)
+    return text
+
+
 class LotteryDataExtractor:
     def __init__(self, excel_path):
         """
@@ -83,14 +104,14 @@ class LotteryDataExtractor:
 
             try:
                 data = {
-                    'draw_data': [str(x).strip().zfill(3) for x in self.df.loc[row, cols]],
-                    'R2': [str(x).strip() for x in self.df.loc[row + 1, cols]],
-                    'R4': [str(x).strip() for x in self.df.loc[row + 2, cols]],
-                    'R6': [str(x).strip() for x in self.df.loc[row + 3, cols]],
-                    'R8': [str(x).strip() for x in self.df.loc[row + 4, cols]]
+                    'draw_data': [_format_draw(x) for x in self.df.loc[row, cols]],
+                    'R2': [_clean_cell(x) for x in self.df.loc[row + 1, cols]],
+                    'R4': [_clean_cell(x) for x in self.df.loc[row + 2, cols]],
+                    'R6': [_clean_cell(x) for x in self.df.loc[row + 3, cols]],
+                    'R8': [_clean_cell(x) for x in self.df.loc[row + 4, cols]]
                 }
 
-                indicator_val = str(self.df.loc[row + 1, config['indicator_col']]).strip()
+                indicator_val = _clean_cell(self.df.loc[row + 1, config['indicator_col']])
                 if not indicator_val.startswith("R-2"):
                     print(f"Warning: Expected 'R-2' at row {row+1} for {section} Set1 Draw{draw_num}, found '{indicator_val}'")
 
@@ -127,14 +148,14 @@ class LotteryDataExtractor:
         
         try:
             data = {
-                'draw_data': [str(x).strip().zfill(3) for x in self.df.loc[actual_base, cols]],
-                'R2': [str(x).strip() for x in self.df.loc[actual_base + 1, cols]],
-                'R4': [str(x).strip() for x in self.df.loc[actual_base + 2, cols]],
-                'R6': [str(x).strip() for x in self.df.loc[actual_base + 3, cols]],
-                'R8': [str(x).strip() for x in self.df.loc[actual_base + 4, cols]]
+                'draw_data': [_format_draw(x) for x in self.df.loc[actual_base, cols]],
+                'R2': [_clean_cell(x) for x in self.df.loc[actual_base + 1, cols]],
+                'R4': [_clean_cell(x) for x in self.df.loc[actual_base + 2, cols]],
+                'R6': [_clean_cell(x) for x in self.df.loc[actual_base + 3, cols]],
+                'R8': [_clean_cell(x) for x in self.df.loc[actual_base + 4, cols]]
             }
             
-            indicator_val = str(self.df.loc[actual_base + 1, config['indicator_col']]).strip()
+            indicator_val = _clean_cell(self.df.loc[actual_base + 1, config['indicator_col']])
             if not indicator_val.startswith("R-2"):
                 print(f"Warning: Expected 'R-2' at row {actual_base+1} for {section} Set{set_num} Draw1, found '{indicator_val}'")
             
@@ -255,4 +276,4 @@ if __name__ == "__main__":
                         print(f"    {draw}")
     else:
         print(f"Test file not found: {test_file}")
-        print("Please run clean_data.py first to generate cleaned files.") 
+        print("Please run clean_data.py first to generate cleaned files.")

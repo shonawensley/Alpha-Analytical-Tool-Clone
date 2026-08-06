@@ -65,12 +65,14 @@ def mark_hot_zones(set_label, draw_label, row_type, vals):
                 idx = n - 1 - i  # start from the end
                 if idx < 0:
                     break
+                if not vals[idx]:
+                    continue
                 
                 # Check if this position should be super hot
                 if i < super_hot_count:
-                    vals[idx] = vals[idx] + "**" if vals[idx] else "**"
+                    vals[idx] = vals[idx] + "**"
                 else:
-                    vals[idx] = vals[idx] + "*" if vals[idx] else "*"
+                    vals[idx] = vals[idx] + "*"
                     
         except:
             return vals  # parsing error: do nothing
@@ -373,4 +375,4 @@ def data_to_json(section_data):
 if __name__ == "__main__":
     # Demo with sample data
     print("This module is designed to be imported, not run directly.")
-    print("For testing, import and use the functions with sample data.") 
+    print("For testing, import and use the functions with sample data.")
