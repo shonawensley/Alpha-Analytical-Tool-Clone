@@ -31,6 +31,7 @@ from datetime import date as _date
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Iterable
+from urllib.parse import quote
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
@@ -100,7 +101,8 @@ def safe_rel(path: Path) -> str:
 
 
 def rel_link(src_dir: Path, target: Path) -> str:
-    return os.path.relpath(target, src_dir).replace("\\", "/")
+    rel = os.path.relpath(target, src_dir).replace("\\", "/")
+    return quote(rel, safe="/.-_~")
 
 
 def md_link(label: str, src_dir: Path, target: Path) -> str:
@@ -232,10 +234,10 @@ def build_review_index(
     lines.append("## Core Model")
     lines.append("")
     lines.append(f"- Global 5-layer guide: {md_link(global_guide.name, window_root, global_guide)}")
-    lines.append("- Predictive Brain 1 SSOT: state-local Arena evidence under `sharepacks/_predictive/<D>/<STATE>/analysis/`.")
-    lines.append("- Predictive Brain 2 SSOT: day-level board/runtime receipts under `ANALYSIS_ARENA/`.")
-    lines.append("- Post-results validation SSOT: reverse-engineering reports under `VALIDATION/`.")
-    lines.append("- Control-arm comparison SSOT: old downstream grades indexed in `CONTROL_ARM_INDEX.md`.")
+    lines.append("- Predictive Brain 1 SSOT: state-local Arena evidence surfaced through the generated predictive review shells and the linked state kits.")
+    lines.append(f"- Predictive Brain 2 SSOT: {md_link('ANALYSIS_ARENA/', window_root, window_root / 'ANALYSIS_ARENA')}")
+    lines.append(f"- Post-results validation SSOT: {md_link('VALIDATION/', window_root, window_root / 'VALIDATION')}")
+    lines.append(f"- Control-arm comparison SSOT: old downstream grades indexed in {md_link('CONTROL_ARM_INDEX.md', window_root, control_arm_index)}.")
     lines.append("- Window-close learning SSOT: March closeout diagnostics at the window root.")
     lines.append("")
     lines.append("## Dual-Performance Model")
@@ -248,7 +250,7 @@ def build_review_index(
     lines.append("")
     lines.append(f"- Machine manifest: {md_link(manifest.name, window_root, manifest)}")
     lines.append(f"- Control-arm index: {md_link(control_arm_index.name, window_root, control_arm_index)}")
-    lines.append("- Generated predictive review shells: `PREDICTIVE/<D>__<STATE>__PREDICTIVE__tool_only__arena_v0.md`")
+    lines.append(f"- Generated predictive review shells folder: {md_link('PREDICTIVE/', window_root, predictive_dir)}")
     if "ANALYSIS_ARENA__CYCLE__WINDOW_CLOSE__tool_only__arena_v0.md" in window_close_files:
         lines.append(
             f"- Window-close cadence receipt: {md_link('ANALYSIS_ARENA__CYCLE__WINDOW_CLOSE__tool_only__arena_v0.md', window_root, window_root / 'ANALYSIS_ARENA__CYCLE__WINDOW_CLOSE__tool_only__arena_v0.md')}"
