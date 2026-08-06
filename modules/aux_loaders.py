@@ -22,14 +22,16 @@ def _strip_trailing_digits(s: str) -> str:
     return s[:i]
 
 
-_CATEGORY_SUFFIXES_NORM = ("midday", "evening", "morning", "nite", "noon")
-
 _SUFFIX_VARIANT_MAP: Dict[str, str] = {
     "_midday": "midday",
     "_evening": "evening",
     "_morning": "morning",
     "_nite": "nite",
     "_noon": "noon",
+}
+
+_STATE_ALIASES = {
+    "ontariocanada": "ontario",
 }
 
 _DRAWS_ROOT = Path(get_cleaned_draws_dir())
@@ -64,80 +66,54 @@ def _stem_without_suffix(path: Path) -> str:
     return stem
 
 
+def _state_norms(label: str) -> set[str]:
+    values = {
+        _norm(label),
+        _norm(_strip_trailing_digits(label)),
+    }
+    for value in tuple(values):
+        alias = _STATE_ALIASES.get(value)
+        if alias:
+            values.add(alias)
+    return {value for value in values if value}
+
+
 def _pick_draws_csv_for_variant(label: str, base: Path, variant: Variant) -> Optional[Path]:
     """Pick the most likely *_draws.csv for a given UI label/variant combination."""
     if not base.exists():
         return None
 
-    want = _norm(label)
-    want_no4 = _norm(_strip_trailing_digits(label))
-
-    candidates = list(base.glob("*_draws.csv"))
+    wanted = _state_norms(label)
+    candidates = sorted(base.glob("*_draws.csv"))
     if not candidates:
         return None
-
-    best_score = -1
-    best_path: Optional[Path] = None
 
     for path in candidates:
         stem = _stem_without_suffix(path)
         state_stem, detected_variant = _split_variant_from_stem(stem)
         if detected_variant != variant:
             continue
-
-        stem_norm = _norm(state_stem)
-        score = 0
-        if stem_norm == want or stem_norm == want_no4:
-            score = 3
-        elif (
-            want in stem_norm
-            or stem_norm in want
-            or want_no4 in stem_norm
-            or stem_norm in want_no4
-        ):
-            score = 2
-        else:
-            score = 1
-
-        if score > best_score:
-            best_score = score
-            best_path = path
-
-    # Do not "guess" a completely unrelated state's file if the desired variant
-    # doesn't exist for this label (e.g., Virginia_Midday_draws.csv missing).
-    return best_path if best_score >= 2 else None
+        if _norm(state_stem) in wanted:
+            return path
+    return None
 
 
 def _pick_combined_csv(label: str, base: Path) -> Optional[Path]:
     """Original combined resolver retained for backwards compatibility."""
     if not base.exists():
         return None
-    want = _norm(label)
-    want_no4 = _norm(_strip_trailing_digits(label))
-
-    candidates = list(base.glob("*_draws.csv"))
+    wanted = _state_norms(label)
+    candidates = sorted(base.glob("*_draws.csv"))
     if not candidates:
         return None
 
-    def stem_norm(p: Path) -> str:
-        stem = _stem_without_suffix(p)
-        return _norm(stem)
-
-    for p in candidates:
-        sn = stem_norm(p)
-        if sn == want or sn == want_no4:
-            return p
-
-    filtered: List[Tuple[Path, str]] = []
-    for p in candidates:
-        sn = stem_norm(p)
-        if any(sn.endswith(sfx) for sfx in _CATEGORY_SUFFIXES_NORM):
+    for path in candidates:
+        stem = _stem_without_suffix(path)
+        state_stem, detected_variant = _split_variant_from_stem(stem)
+        if detected_variant != "combined":
             continue
-        filtered.append((p, sn))
-
-    for p, sn in filtered:
-        if want in sn or want_no4 in sn or sn in want or sn in want_no4:
-            return p
+        if _norm(state_stem) in wanted:
+            return path
     return None
 
 

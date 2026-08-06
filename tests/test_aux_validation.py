@@ -195,7 +195,70 @@ def test_positional_shortlist_candidates_and_consensus(monkeypatch):
     monkeypatch.setattr(av, "load_state_draws", fake_loader)
 
     report = av.positional_shortlist_report(POS_STATE, window=150)
+    assert report["schema_version"] == "positional_shortlist_report_v2"
+    assert report["source_scope"] == "STATE"
+    assert report["variant_scope"] == ["combined", "midday", "evening"]
+    for variant in ("combined", "midday", "evening"):
+        positions = report["variant_position_grid"][variant]["positions"]
+        assert set(positions) == {"0", "1", "2"}
+        assert all(len(payload["top_digits"]) == 3 for payload in positions.values())
+    assert any(
+        row["digit"] == 0
+        for payload in report["variant_position_grid"]["midday"]["positions"].values()
+        for row in payload["top_digits"]
+    )
+
     combos = [entry["combo"] for entry in report["candidates"][:5]]
     assert combos == ["845", "145", "545", "844", "144"]
+    first = report["candidates"][0]
+    assert {
+        "rank",
+        "canonical",
+        "native_ranks",
+        "digital_root",
+        "vtrac_index",
+        "evidence",
+        "lineage",
+    }.issubset(first)
+    assert first["rank"] == 1
+    assert first["lineage"]["source_family"] == "aux_positional"
+    assert first["lineage"]["state_key"] == POS_STATE
+
+    receipt = report["context_receipt"]
+    assert receipt["due_doubles"]["input_available"] is False
+    assert receipt["vtrac_hot_indices"]["input_available"] is False
+    assert receipt["vtrac_hot_families"]["input_available"] is False
+    assert receipt["any_optional_context_applied"] is False
     assert any("XVAR-Cons" in note for note in report["consensus_notes"])
     assert report["double_pressure_notes"]
+
+
+def test_positional_context_receipt_distinguishes_supplied_but_inactive(monkeypatch):
+    def fake_loader(state, variant="combined", base=None, max_n=1000):
+        draws = _load_positional_fixture(state, variant)
+        return draws, f"fixture/{state}_{variant}"
+
+    monkeypatch.setattr(av, "load_state_draws", fake_loader)
+
+    report = av.positional_shortlist_report(
+        POS_STATE,
+        window=150,
+        due_doubles_active=False,
+        vtrac_hot_indices=[],
+        vtrac_hot_families={},
+    )
+
+    receipt = report["context_receipt"]
+    assert receipt["due_doubles"] == {
+        "input_available": True,
+        "active": False,
+    }
+    assert receipt["vtrac_hot_indices"] == {
+        "input_available": True,
+        "values": [],
+    }
+    assert receipt["vtrac_hot_families"] == {
+        "input_available": True,
+        "values": {},
+    }
+    assert receipt["any_optional_context_applied"] is False

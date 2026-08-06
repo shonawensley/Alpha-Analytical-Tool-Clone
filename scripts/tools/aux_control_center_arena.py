@@ -71,6 +71,11 @@ def _to_float(value: object, default: float = 0.0) -> float:
         return float(default)
 
 
+def _digit_text(value: object) -> str:
+    """Serialize a digit without treating integer zero as missing."""
+    return "" if value is None else str(value).strip()
+
+
 def _variant_title(value: object) -> str:
     raw = str(value or "").strip()
     if not raw:
@@ -153,7 +158,7 @@ def _top_aggregated_digits(raw: Dict[str, Any], top_n: int) -> Dict[str, List[Di
                 continue
             cleaned.append(
                 {
-                    "digit": str(row.get("digit") or ""),
+                    "digit": _digit_text(row.get("digit")),
                     "score": round(_to_float(row.get("score")), 6),
                     "tags": [str(tag) for tag in row.get("tags", []) if str(tag)],
                     "occurrences": row.get("occurrences") if isinstance(row.get("occurrences"), list) else [],
@@ -169,22 +174,46 @@ def _summarize_positional(summary: Dict[str, Any], top_n: int) -> Dict[str, Any]
     shortlist = positional.get("shortlist_report") if isinstance(positional.get("shortlist_report"), dict) else {}
     hard_due = positional.get("hard_due_by_variant") if isinstance(positional.get("hard_due_by_variant"), dict) else {}
 
-    shortlist_top: List[Dict[str, Any]] = []
-    for row in shortlist.get("candidates", []) if isinstance(shortlist.get("candidates"), list) else []:
+    shortlist_full: List[Dict[str, Any]] = []
+    raw_candidates = shortlist.get("candidates") if isinstance(shortlist.get("candidates"), list) else []
+    for ordinal, row in enumerate(raw_candidates, start=1):
         if not isinstance(row, dict):
             continue
         combo = _normalize_pick3_literal(row.get("combo"))
-        shortlist_top.append(
+        lineage = row.get("lineage") if isinstance(row.get("lineage"), dict) else {}
+        shortlist_full.append(
             {
+                "rank": _to_int(row.get("rank"), default=ordinal),
                 "combo": combo,
                 "canonical": _canon(combo) or str(row.get("canonical") or ""),
                 "score": round(_to_float(row.get("score")), 6),
                 "source": str(row.get("source") or ""),
                 "vtrac_index": _to_int(row.get("vtrac_index"), default=-1),
+                "native_ranks": [
+                    _to_int(value, default=0)
+                    for value in row.get("native_ranks", [])
+                ]
+                if isinstance(row.get("native_ranks"), list)
+                else [],
+                "digital_root": _to_int(row.get("digital_root"), default=0),
                 "tags": [str(tag) for tag in row.get("tags", []) if str(tag)],
+                "evidence": [
+                    str(value)
+                    for value in row.get("evidence", [])
+                    if str(value)
+                ]
+                if isinstance(row.get("evidence"), list)
+                else [],
+                "lineage": dict(lineage),
             }
         )
-    shortlist_top.sort(key=lambda item: (-float(item.get("score") or 0.0), str(item.get("combo") or "")))
+    shortlist_full.sort(
+        key=lambda item: (
+            int(item.get("rank") or 0),
+            -float(item.get("score") or 0.0),
+            str(item.get("combo") or ""),
+        )
+    )
 
     variant_top_digits: Dict[str, Any] = {}
     raw_variant_top = shortlist.get("variant_top_digits") if isinstance(shortlist.get("variant_top_digits"), dict) else {}
@@ -195,7 +224,7 @@ def _summarize_positional(summary: Dict[str, Any], top_n: int) -> Dict[str, Any]
             [
                 {
                     "position": _to_int(row.get("position"), default=-1),
-                    "digit": str(row.get("digit") or ""),
+                    "digit": _digit_text(row.get("digit")),
                     "gap": _to_int(row.get("gap"), default=0),
                     "rank": _to_int(row.get("rank"), default=0),
                 }
@@ -205,14 +234,141 @@ def _summarize_positional(summary: Dict[str, Any], top_n: int) -> Dict[str, Any]
             top_n,
         )
 
+    variant_position_grid: Dict[str, Any] = {}
+    raw_position_grid = (
+        shortlist.get("variant_position_grid")
+        if isinstance(shortlist.get("variant_position_grid"), dict)
+        else {}
+    )
+    for variant, variant_payload in raw_position_grid.items():
+        if not isinstance(variant_payload, dict):
+            continue
+        positions_out: Dict[str, Any] = {}
+        raw_positions = (
+            variant_payload.get("positions")
+            if isinstance(variant_payload.get("positions"), dict)
+            else {}
+        )
+        for position, position_payload in raw_positions.items():
+            if not isinstance(position_payload, dict):
+                continue
+            top_digits = []
+            for row in (
+                position_payload.get("top_digits")
+                if isinstance(position_payload.get("top_digits"), list)
+                else []
+            ):
+                if not isinstance(row, dict):
+                    continue
+                score_components = (
+                    row.get("score_components")
+                    if isinstance(row.get("score_components"), dict)
+                    else {}
+                )
+                top_digits.append(
+                    {
+                        "digit": _digit_text(row.get("digit")),
+                        "rank": _to_int(row.get("rank"), default=0),
+                        "gap": _to_int(row.get("gap"), default=0),
+                        "gap_percentile": round(
+                            _to_float(row.get("gap_percentile")), 6
+                        ),
+                        "lag_weight": round(
+                            _to_float(row.get("lag_weight")), 6
+                        ),
+                        "occurrence_count": _to_int(
+                            row.get("occurrence_count"), default=0
+                        ),
+                        "last_seen_index": (
+                            None
+                            if row.get("last_seen_index") is None
+                            else _to_int(row.get("last_seen_index"), default=0)
+                        ),
+                        "score": round(_to_float(row.get("score")), 6),
+                        "score_components": {
+                            str(key): round(_to_float(value), 6)
+                            for key, value in sorted(score_components.items())
+                        },
+                        "tags": [
+                            str(tag)
+                            for tag in row.get("tags", [])
+                            if str(tag)
+                        ]
+                        if isinstance(row.get("tags"), list)
+                        else [],
+                        "hard_due": bool(row.get("hard_due")),
+                    }
+                )
+            positions_out[str(position)] = {
+                "position": _to_int(
+                    position_payload.get("position"), default=_to_int(position, -1)
+                ),
+                "population": _to_int(
+                    position_payload.get("population"), default=0
+                ),
+                "window": _to_int(position_payload.get("window"), default=0),
+                "top_digits": top_digits,
+            }
+        variant_position_grid[_variant_title(variant)] = {
+            "draws_used": _to_int(variant_payload.get("draws_used"), default=0),
+            "window": _to_int(variant_payload.get("window"), default=0),
+            "positions": positions_out,
+        }
+
+    aggregated_position_ladders: Dict[str, Any] = {}
+    raw_ladders = (
+        shortlist.get("aggregated_position_ladders")
+        if isinstance(shortlist.get("aggregated_position_ladders"), dict)
+        else {}
+    )
+    for position, rows in raw_ladders.items():
+        if not isinstance(rows, list):
+            continue
+        aggregated_position_ladders[str(position)] = [
+            {
+                "rank": _to_int(row.get("rank"), default=ordinal),
+                "digit": _digit_text(row.get("digit")),
+                "score": round(_to_float(row.get("score")), 6),
+                "tags": [
+                    str(tag)
+                    for tag in row.get("tags", [])
+                    if str(tag)
+                ]
+                if isinstance(row.get("tags"), list)
+                else [],
+                "occurrences": (
+                    row.get("occurrences")
+                    if isinstance(row.get("occurrences"), list)
+                    else []
+                ),
+            }
+            for ordinal, row in enumerate(rows, start=1)
+            if isinstance(row, dict)
+        ]
+
     consensus_notes = _top_n([str(note) for note in shortlist.get("consensus_notes", []) if str(note)], top_n)
     double_pressure_notes = _top_n(
         [str(note) for note in shortlist.get("double_pressure_notes", []) if str(note)], top_n
     )
+    context_receipt = (
+        dict(shortlist.get("context_receipt"))
+        if isinstance(shortlist.get("context_receipt"), dict)
+        else {"availability": "not_exported_by_source"}
+    )
 
     return {
-        "available": bool(shortlist_top or hard_due),
-        "shortlist_count": len(shortlist_top),
+        "available": bool(shortlist_full or hard_due or variant_position_grid),
+        "source_contract": str(
+            shortlist.get("schema_version") or "legacy_positional_summary"
+        ),
+        "source_scope": str(shortlist.get("source_scope") or "STATE"),
+        "variant_scope": (
+            list(shortlist.get("variant_scope"))
+            if isinstance(shortlist.get("variant_scope"), list)
+            else []
+        ),
+        "context_receipt": context_receipt,
+        "shortlist_count": len(shortlist_full),
         "variant_count": len(variant_top_digits),
         "hard_due_by_variant": _sorted_variants(
             {
@@ -220,7 +376,7 @@ def _summarize_positional(summary: Dict[str, Any], top_n: int) -> Dict[str, Any]
                     [
                         {
                             "position": _to_int(item.get("position"), default=-1),
-                            "digit": str(item.get("digit") or ""),
+                            "digit": _digit_text(item.get("digit")),
                             "draws_since": _to_int(item.get("draws_since"), default=0),
                         }
                         for item in rows
@@ -233,10 +389,13 @@ def _summarize_positional(summary: Dict[str, Any], top_n: int) -> Dict[str, Any]
             }
         ),
         "variant_top_digits": _sorted_variants(variant_top_digits),
+        "variant_position_grid": _sorted_variants(variant_position_grid),
+        "aggregated_position_ladders": aggregated_position_ladders,
         "aggregated_digits_top": _top_aggregated_digits(
             shortlist.get("aggregated_digits") if isinstance(shortlist.get("aggregated_digits"), dict) else {}, top_n
         ),
-        "shortlist_top": _top_n(shortlist_top, top_n),
+        "shortlist_full": shortlist_full,
+        "shortlist_top": _top_n(shortlist_full, top_n),
         "consensus_notes": consensus_notes,
         "double_pressure_notes": double_pressure_notes,
         "signal_notes_top": _top_n([*consensus_notes, *double_pressure_notes], top_n),

@@ -37,17 +37,135 @@ def _build_aux_cc_fixture(tmp_path: Path) -> tuple[Path, Path, Path]:
                 "evening": [{"position": 2, "digit": 8, "draws_since": 57}],
             },
             "shortlist_report": {
+                "schema_version": "positional_shortlist_report_v2",
+                "source_scope": "STATE",
+                "variant_scope": ["combined", "midday", "evening"],
+                "context_receipt": {
+                    "due_doubles": {
+                        "input_available": False,
+                        "active": False,
+                    },
+                    "vtrac_hot_indices": {
+                        "input_available": False,
+                        "values": [],
+                    },
+                    "vtrac_hot_families": {
+                        "input_available": False,
+                        "values": {},
+                    },
+                    "any_optional_context_applied": False,
+                },
                 "variant_top_digits": {
                     "combined": [{"position": 0, "digit": 6, "gap": 42, "rank": 1}],
+                    "midday": [{"position": 0, "digit": 0, "gap": 31, "rank": 1}],
                     "evening": [{"position": 2, "digit": 8, "gap": 57, "rank": 1}],
                 },
+                "variant_position_grid": {
+                    "midday": {
+                        "draws_used": 150,
+                        "window": 150,
+                        "positions": {
+                            "0": {
+                                "position": 0,
+                                "population": 10,
+                                "window": 150,
+                                "top_digits": [
+                                    {
+                                        "digit": 0,
+                                        "rank": 1,
+                                        "gap": 31,
+                                        "gap_percentile": 0.82,
+                                        "lag_weight": 0.88,
+                                        "occurrence_count": 15,
+                                        "last_seen_index": 31,
+                                        "score": 3.7,
+                                        "score_components": {
+                                            "lag": 2.5,
+                                            "rank": 1.2,
+                                        },
+                                        "tags": ["R1"],
+                                        "hard_due": False,
+                                    },
+                                    {
+                                        "digit": 5,
+                                        "rank": 2,
+                                        "gap": 22,
+                                        "gap_percentile": 0.61,
+                                        "lag_weight": 0.63,
+                                        "occurrence_count": 14,
+                                        "last_seen_index": 22,
+                                        "score": 2.1,
+                                        "score_components": {"lag": 2.1},
+                                        "tags": ["Mirror-Echo"],
+                                        "hard_due": False,
+                                    },
+                                ],
+                            }
+                        },
+                    }
+                },
+                "aggregated_position_ladders": {
+                    "0": [
+                        {
+                            "rank": 1,
+                            "digit": 0,
+                            "score": 3.7,
+                            "tags": ["R1"],
+                            "occurrences": [
+                                {
+                                    "variant": "midday",
+                                    "rank": 1,
+                                }
+                            ],
+                        }
+                    ]
+                },
                 "aggregated_digits": {
-                    "0": [{"digit": 6, "score": 3.2, "tags": ["R1"], "occurrences": [["combined", 1]]}],
+                    "0": [
+                        {"digit": 0, "score": 3.7, "tags": ["R1"], "occurrences": [["midday", 1]]},
+                        {"digit": 6, "score": 3.2, "tags": ["R1"], "occurrences": [["combined", 1]]},
+                    ],
                     "2": [{"digit": 8, "score": 4.1, "tags": ["R2"], "occurrences": [["evening", 1]]}],
                 },
                 "candidates": [
-                    {"combo": "638", "canonical": "368", "score": 39.1, "source": "cartesian", "vtrac_index": 23, "tags": ["XVAR-Cons"]},
-                    {"combo": "344", "canonical": "344", "score": 31.6, "source": "cartesian", "vtrac_index": 34, "tags": ["Double-Pressure"]},
+                    {
+                        "rank": 1,
+                        "combo": "638",
+                        "canonical": "368",
+                        "score": 39.1,
+                        "source": "cartesian",
+                        "vtrac_index": 23,
+                        "native_ranks": [1, 1, 2],
+                        "digital_root": 8,
+                        "tags": ["XVAR-Cons"],
+                        "evidence": ["P1:6", "P2:3", "P3:8"],
+                        "lineage": {
+                            "source_family": "aux_positional",
+                            "source_object": "state_shortlist",
+                            "state_key": "TestState",
+                            "native_rank": 1,
+                            "construction_source": "cartesian",
+                        },
+                    },
+                    {
+                        "rank": 2,
+                        "combo": "344",
+                        "canonical": "344",
+                        "score": 31.6,
+                        "source": "cartesian",
+                        "vtrac_index": 34,
+                        "native_ranks": [2, 1, 1],
+                        "digital_root": 2,
+                        "tags": ["Double-Pressure"],
+                        "evidence": ["P1:3", "P2:4", "P3:4"],
+                        "lineage": {
+                            "source_family": "aux_positional",
+                            "source_object": "state_shortlist",
+                            "state_key": "TestState",
+                            "native_rank": 2,
+                            "construction_source": "cartesian",
+                        },
+                    },
                 ],
                 "consensus_notes": ["P1 digit 6 aligns across Combined, Evening"],
                 "double_pressure_notes": ["Digit 3 (mirror 8) pressuring two positions"],
@@ -219,7 +337,29 @@ def test_build_aux_control_center_arena_payload(tmp_path: Path) -> None:
     assert payload["available"] is True
     assert payload["schema_version"] == "aux_control_center_arena_v1"
     assert "aux_positional_pressure" in payload["arena_objects"]
-    assert payload["arena_objects"]["aux_positional_pressure"]["shortlist_top"][0]["canonical"] == "368"
+    positional = payload["arena_objects"]["aux_positional_pressure"]
+    assert positional["source_contract"] == "positional_shortlist_report_v2"
+    assert positional["shortlist_top"][0]["canonical"] == "368"
+    assert positional["shortlist_full"][0]["rank"] == 1
+    assert positional["shortlist_full"][0]["vtrac_index"] == 23
+    assert positional["shortlist_full"][0]["native_ranks"] == [1, 1, 2]
+    assert positional["shortlist_full"][0]["evidence"] == [
+        "P1:6",
+        "P2:3",
+        "P3:8",
+    ]
+    assert (
+        positional["shortlist_full"][0]["lineage"]["source_family"]
+        == "aux_positional"
+    )
+    assert (
+        positional["variant_position_grid"]["Midday"]["positions"]["0"][
+            "top_digits"
+        ][0]["digit"]
+        == "0"
+    )
+    assert positional["aggregated_digits_top"]["0"][0]["digit"] == "0"
+    assert positional["context_receipt"]["due_doubles"]["input_available"] is False
     assert payload["arena_objects"]["aux_badge_pressure"]["index_pressure"]["available"] is True
     assert payload["arena_objects"]["aux_due_doubles_family_pressure"]["by_variant"]["Evening"]["draws_since_double"] == 7
     assert payload["arena_objects"]["cc_profit_alert_context"]["alert_count"] == 1
@@ -237,4 +377,3 @@ def test_build_aux_control_center_arena_payload(tmp_path: Path) -> None:
     arena_json, arena_md = write_aux_control_center_files(out_json_path=out_json, payload=payload, write_md=True)
     assert arena_json.exists()
     assert arena_md is not None and arena_md.exists()
-

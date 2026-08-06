@@ -505,11 +505,11 @@ def positional_shortlist_report(
     window: int = POSITIONAL_WINDOW,
     topk: Optional[int] = None,
     shortlist_config: Optional[Mapping[str, Any]] = None,
-    due_doubles_active: bool = False,
+    due_doubles_active: Optional[bool] = None,
     vtrac_hot_indices: Optional[Iterable[int]] = None,
     vtrac_hot_families: Optional[Mapping[str, str]] = None,
 ) -> Dict[str, Any]:
-    """Compute positional shortlist summary for a state across variants."""
+    """Compute a backward-compatible, lossless Positional state summary."""
     if not analyze_state_variants:
         return {}
     draws_by_variant = load_variant_draws(state, base=base, max_n=max_n)
@@ -519,55 +519,175 @@ def positional_shortlist_report(
     if shortlist_config:
         cfg.update(shortlist_config)
     topk_val = int(topk if topk is not None else cfg.get("topk_per_pos", 3))
+    due_active = bool(due_doubles_active)
+    hot_indices = sorted({int(value) for value in (vtrac_hot_indices or [])})
+    hot_families = {
+        str(key): str(value)
+        for key, value in sorted((vtrac_hot_families or {}).items())
+    }
     report = analyze_state_variants(
         draws_by_variant,
         window=window,
         topk=topk_val,
         shortlist_cfg=cfg,
-        due_doubles_active=due_doubles_active,
-        vtrac_hot_indices=vtrac_hot_indices or set(),
-        vtrac_hot_families=vtrac_hot_families or {},
+        due_doubles_active=due_active,
+        vtrac_hot_indices=hot_indices,
+        vtrac_hot_families=hot_families,
     )
+
+    variant_position_grid: Dict[str, Dict[str, Any]] = {}
     variant_top_digits: Dict[str, List[Dict[str, int]]] = {}
     for variant, result in report.variant_results.items():
+        positions: Dict[str, Any] = {}
         top_list: List[Dict[str, int]] = []
         summaries = getattr(result, "position_summaries", {})
+        tracker_grid = getattr(result, "tracker_grid", {})
         for position in (0, 1, 2):
             summary = summaries.get(position)
+            hard_due_by_digit = {
+                int(getattr(cell, "digit", -1)): bool(
+                    getattr(cell, "hard_due", False)
+                )
+                for cell in tracker_grid.get(position, [])
+            }
+            full_rows: List[Dict[str, Any]] = []
             if summary and summary.top_digits:
-                top_digit = summary.top_digits[0]
+                for item in summary.top_digits:
+                    digit = int(getattr(item, "digit", -1))
+                    full_rows.append(
+                        {
+                            "digit": digit,
+                            "rank": int(getattr(item, "rank", 0)),
+                            "gap": int(getattr(item, "gap", 0)),
+                            "gap_percentile": float(
+                                getattr(item, "gap_percentile", 0.0)
+                            ),
+                            "lag_weight": float(getattr(item, "lag_weight", 0.0)),
+                            "occurrence_count": int(
+                                getattr(item, "occurrence_count", 0)
+                            ),
+                            "last_seen_index": getattr(item, "last_seen_index", None),
+                            "score": float(getattr(item, "score", 0.0)),
+                            "score_components": {
+                                str(key): float(value)
+                                for key, value in sorted(
+                                    getattr(item, "score_components", {}).items()
+                                )
+                            },
+                            "tags": list(getattr(item, "tags", [])),
+                            "hard_due": hard_due_by_digit.get(digit, False),
+                        }
+                    )
+                top_digit = full_rows[0]
                 top_list.append(
                     {
                         "position": position,
-                        "digit": int(getattr(top_digit, "digit", -1)),
-                        "gap": int(getattr(top_digit, "gap", 0)),
-                        "rank": int(getattr(top_digit, "rank", 1)),
+                        "digit": int(top_digit["digit"]),
+                        "gap": int(top_digit["gap"]),
+                        "rank": int(top_digit["rank"]),
                     }
                 )
+            positions[str(position)] = {
+                "position": position,
+                "population": int(getattr(summary, "population", 0)),
+                "window": int(getattr(summary, "window", window)),
+                "top_digits": full_rows,
+            }
+        variant_position_grid[variant] = {
+            "draws_used": int(getattr(result, "draws_used", 0)),
+            "window": int(getattr(result, "window", window)),
+            "positions": positions,
+        }
         if top_list:
             variant_top_digits[variant] = top_list
+
+    aggregated_position_ladders: Dict[str, List[Dict[str, Any]]] = {}
     aggregated_summary: Dict[int, List[Dict[str, Any]]] = {}
     for position, digits in getattr(report, "aggregated_digits", {}).items():
+        full_ladder = [
+            {
+                "rank": rank,
+                "digit": int(item.digit),
+                "score": float(item.score),
+                "tags": list(getattr(item, "tags", [])),
+                "occurrences": [
+                    {
+                        "variant": str(variant),
+                        "rank": int(native_rank),
+                    }
+                    for variant, native_rank in getattr(item, "occurrences", [])
+                ],
+            }
+            for rank, item in enumerate(digits, start=1)
+        ]
+        aggregated_position_ladders[str(position)] = full_ladder
         aggregated_summary[position] = [
             {
-                "digit": item.digit,
-                "score": item.score,
-                "tags": list(getattr(item, "tags", [])),
-                "occurrences": list(getattr(item, "occurrences", [])),
+                "digit": row["digit"],
+                "score": row["score"],
+                "tags": row["tags"],
+                "occurrences": [
+                    (item["variant"], item["rank"])
+                    for item in row["occurrences"]
+                ],
             }
-            for item in digits[:5]
+            for row in full_ladder[:5]
         ]
-    candidate_payload = [
-        {
-            "combo": cand.combo,
-            "score": cand.score,
-            "tags": list(getattr(cand, "tags", [])),
-            "source": getattr(cand, "source", ""),
-        }
-        for cand in getattr(report, "candidates", [])
-    ]
+
+    candidate_payload: List[Dict[str, Any]] = []
+    for rank, cand in enumerate(getattr(report, "candidates", []), start=1):
+        combo = str(getattr(cand, "combo", ""))
+        source = str(getattr(cand, "source", ""))
+        candidate_payload.append(
+            {
+                "rank": rank,
+                "combo": combo,
+                "canonical": _canonical(combo),
+                "score": float(getattr(cand, "score", 0.0)),
+                "native_ranks": [
+                    int(value) for value in getattr(cand, "ranks", ())
+                ],
+                "digital_root": int(getattr(cand, "digital_root", 0)),
+                "vtrac_index": getattr(cand, "vtrac_index", None),
+                "tags": list(getattr(cand, "tags", [])),
+                "evidence": list(getattr(cand, "evidence", [])),
+                "source": source,
+                "lineage": {
+                    "source_family": "aux_positional",
+                    "source_object": "state_shortlist",
+                    "state_key": state,
+                    "variant_scope": list(VARIANTS),
+                    "native_rank": rank,
+                    "construction_source": source,
+                },
+            }
+        )
+
+    context_receipt = {
+        "due_doubles": {
+            "input_available": due_doubles_active is not None,
+            "active": due_active,
+        },
+        "vtrac_hot_indices": {
+            "input_available": vtrac_hot_indices is not None,
+            "values": hot_indices,
+        },
+        "vtrac_hot_families": {
+            "input_available": vtrac_hot_families is not None,
+            "values": hot_families,
+        },
+        "any_optional_context_applied": bool(
+            due_active or hot_indices or hot_families
+        ),
+    }
     return {
+        "schema_version": "positional_shortlist_report_v2",
+        "source_scope": "STATE",
+        "variant_scope": list(VARIANTS),
+        "context_receipt": context_receipt,
+        "variant_position_grid": variant_position_grid,
         "variant_top_digits": variant_top_digits,
+        "aggregated_position_ladders": aggregated_position_ladders,
         "aggregated_digits": aggregated_summary,
         "candidates": candidate_payload,
         "consensus_notes": list(getattr(report, "consensus_notes", [])),

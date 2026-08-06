@@ -39,3 +39,46 @@ def test_load_state_draws_variants(tmp_path):
     assert path_e and path_e.endswith("Connecticut_Evening_draws.csv")
 
     assert all(len(value) == 3 for value in draws_c + draws_m + draws_e)
+
+
+def test_missing_west_virginia_variant_does_not_borrow_virginia(tmp_path):
+    base = tmp_path / "draws"
+    base.mkdir()
+
+    _write_csv(base / "Virginia_Midday_draws.csv", ["123", "456"])
+    _write_csv(base / "West_Virginia_draws.csv", ["789", "012"])
+    _write_csv(base / "West_Virginia_Evening_draws.csv", ["345", "678"])
+
+    draws, resolved = aux_loaders.load_state_draws(
+        "WestVirginia4",
+        variant="midday",
+        base=base,
+    )
+
+    assert draws == []
+    assert resolved is None
+
+
+def test_ontario_canada_alias_resolves_exact_ontario_files(tmp_path):
+    base = tmp_path / "draws"
+    base.mkdir()
+
+    _write_csv(base / "Ontario_draws.csv", ["123", "456"])
+    _write_csv(base / "Ontario_Midday_draws.csv", ["234", "567"])
+    _write_csv(base / "Ontario_Evening_draws.csv", ["345", "678"])
+
+    combined, combined_path = aux_loaders.load_state_draws(
+        "OntarioCanada4",
+        variant="combined",
+        base=base,
+    )
+    midday, midday_path = aux_loaders.load_state_draws(
+        "OntarioCanada4",
+        variant="midday",
+        base=base,
+    )
+
+    assert combined == ["123", "456"]
+    assert combined_path and combined_path.endswith("Ontario_draws.csv")
+    assert midday == ["234", "567"]
+    assert midday_path and midday_path.endswith("Ontario_Midday_draws.csv")
