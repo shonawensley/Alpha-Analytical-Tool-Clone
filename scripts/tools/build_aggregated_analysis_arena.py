@@ -14,7 +14,7 @@ import csv
 import hashlib
 import json
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Iterable, List, Optional, Sequence, Tuple
@@ -23,7 +23,12 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from modules.vtrac_reference import get_vtrac_index
+from modules.vtrac_reference import get_index_set, get_vtrac_index
+from modules.vtrac_straight_map import (
+    ordered_vcode_for_combo,
+    vstraight_lane_for_combo,
+    vstraight_lanes_for_index,
+)
 from scripts.tools.aux_control_center_arena import build_aux_control_center_arena_payload
 from scripts.tools.dr_arena import build_dr_arena_payload
 from scripts.tools.stable_arena import build_stable_arena_payload
@@ -95,6 +100,17 @@ def _normalize_pick3_literal(value: object) -> str:
 def _canon(value: object) -> str:
     digits = _normalize_pick3_literal(value)
     return "".join(sorted(digits)) if digits else ""
+
+
+def _append_unique(values: List[str], value: object, *, limit: int = 20) -> None:
+    text = str(value or "").strip()
+    if not text or text in values or len(values) >= int(limit):
+        return
+    values.append(text)
+
+
+def _sorted_counter(counter: Counter[str]) -> Dict[str, int]:
+    return {key: int(counter[key]) for key in sorted(counter, key=lambda k: (-counter[k], k))}
 
 
 def _is_double(canonical: str) -> bool:
@@ -428,6 +444,200 @@ def _load_or_build_aux_payload(
     return {"available": False, "arena_objects": {}}, badge_paths, {"available": False, "source_mode": "missing", "source_path": None}
 
 
+def _build_vtrac_arena_objects(enhanced: Dict[str, Any], *, top_lanes: int = 12, top_witnesses: int = 12) -> Dict[str, Any]:
+    """Build predictive-safe VTRAC lane/corridor review objects."""
+    base = {
+        "schema": "aat9.vtrac_analyzer.arena_objects.v1",
+        "source_scope": "predictive_safe_vtrac_enhanced_only",
+        "semantic_guardrails": {
+            "vcode_labels_are_metadata_only": True,
+            "playable_literals_only": True,
+            "boxed_index_can_contain_multiple_ordered_lanes": True,
+            "no_winner_artifacts_used": True,
+            "no_scoring_weights_changed": True,
+            "source_rows_are_not_independent_votes": True,
+            "review_order": "DESCRIPTIVE_UNCALIBRATED_NATIVE_SCORE_SUM",
+            "score_total_semantics": (
+                "Heterogeneous source-native values plus a bounded rank hint; "
+                "review ordering only, never a calibrated cross-tool score."
+            ),
+        },
+    }
+    if not isinstance(enhanced, dict) or not enhanced:
+        return {**base, "available": False, "ordered_lane_corridors": [], "boxed_index_corridors": []}
+
+    lane_map: Dict[str, Dict[str, Any]] = {}
+    index_map: Dict[str, Dict[str, Any]] = {}
+
+    def lane_record(vcode: str, straight: str) -> Dict[str, Any]:
+        idx = get_vtrac_index(straight)
+        record = lane_map.setdefault(
+            vcode,
+            {
+                "ordered_vcode": vcode,
+                "boxed_vtrac_index": idx,
+                "ordered_lane_8": vstraight_lane_for_combo(straight),
+                "score_total": 0.0,
+                "witness_scores": defaultdict(float),
+                "witness_sources": defaultdict(list),
+                "witness_canonicals": {},
+                "source_indices_seen": set(),
+                "source_types": Counter(),
+            },
+        )
+        if record.get("boxed_vtrac_index") is None:
+            record["boxed_vtrac_index"] = idx
+        return record
+
+    def index_record(idx: int) -> Dict[str, Any]:
+        key = str(idx)
+        return index_map.setdefault(
+            key,
+            {
+                "boxed_vtrac_index": idx,
+                "score_total": 0.0,
+                "ordered_vcodes_present": set(),
+                "witness_scores": defaultdict(float),
+                "witness_sources": defaultdict(list),
+                "witness_canonicals": {},
+                "source_indices_seen": set(),
+                "source_types": Counter(),
+            },
+        )
+
+    def register(straight_value: object, *, score: float, source: str, source_index: object = None) -> None:
+        straight = _normalize_pick3_literal(straight_value)
+        if not straight:
+            return
+        vcode = ordered_vcode_for_combo(straight)
+        if not vcode:
+            return
+        idx = get_vtrac_index(straight)
+        canonical = _canon(straight)
+        lane = lane_record(vcode, straight)
+        lane["score_total"] += float(score)
+        lane["witness_scores"][straight] += float(score)
+        _append_unique(lane["witness_sources"][straight], source, limit=12)
+        lane["witness_canonicals"][straight] = canonical
+        lane["source_types"][source.split(":", 1)[0]] += 1
+        if source_index is not None and str(source_index).strip():
+            lane["source_indices_seen"].add(str(source_index).strip())
+
+        if idx is None:
+            return
+        corridor = index_record(int(idx))
+        corridor["score_total"] += float(score)
+        corridor["ordered_vcodes_present"].add(vcode)
+        corridor["witness_scores"][straight] += float(score)
+        _append_unique(corridor["witness_sources"][straight], source, limit=12)
+        corridor["witness_canonicals"][straight] = canonical
+        corridor["source_types"][source.split(":", 1)[0]] += 1
+        if source_index is not None and str(source_index).strip():
+            corridor["source_indices_seen"].add(str(source_index).strip())
+
+    for rank, entry in enumerate(enhanced.get("straights_ranked", []) if isinstance(enhanced.get("straights_ranked"), list) else [], start=1):
+        if not isinstance(entry, dict):
+            continue
+        score = _to_float(entry.get("score"))
+        register(
+            entry.get("straight"),
+            score=score + max(0.0, 1.0 - (rank * 0.01)),
+            source="straights_ranked",
+            source_index=entry.get("index"),
+        )
+
+    for entry in enhanced.get("indices_ranked", []) if isinstance(enhanced.get("indices_ranked"), list) else []:
+        if not isinstance(entry, dict):
+            continue
+        evidence = entry.get("evidence") if isinstance(entry.get("evidence"), dict) else {}
+        raw = evidence.get("raw") if isinstance(evidence.get("raw"), dict) else {}
+        order_counts = raw.get("order_counts") if isinstance(raw.get("order_counts"), dict) else {}
+        for straight, value in order_counts.items():
+            register(straight, score=_to_float(value), source="indices_ranked.order_counts", source_index=entry.get("index"))
+
+    section_summaries = enhanced.get("section_summaries") if isinstance(enhanced.get("section_summaries"), dict) else {}
+    for section, block in section_summaries.items():
+        if not isinstance(block, dict):
+            continue
+        for key in ("top_straights", "top_straight_witnesses", "straights_ranked"):
+            rows = block.get(key)
+            if not isinstance(rows, list):
+                continue
+            for row in rows[:25]:
+                if isinstance(row, dict):
+                    straight = row.get("straight") or row.get("pattern") or row.get("value") or row.get("candidate")
+                    score = _to_float(row.get("score") or row.get("count") or row.get("weight"), default=1.0)
+                else:
+                    straight = row
+                    score = 1.0
+                register(straight, score=score, source=f"section_summaries:{section}:{key}")
+
+    def witness_rows(record: Dict[str, Any]) -> List[Dict[str, Any]]:
+        scores = record.get("witness_scores") or {}
+        sources = record.get("witness_sources") or {}
+        canonicals = record.get("witness_canonicals") or {}
+        rows = []
+        for straight, score in sorted(scores.items(), key=lambda item: (-float(item[1]), item[0]))[: int(top_witnesses)]:
+            rows.append(
+                {
+                    "straight": straight,
+                    "canonical": canonicals.get(straight) or _canon(straight),
+                    "score": round(float(score), 6),
+                    "sources": list(sources.get(straight) or []),
+                }
+            )
+        return rows
+
+    ordered_rows: List[Dict[str, Any]] = []
+    for record in sorted(lane_map.values(), key=lambda item: (-float(item.get("score_total") or 0.0), str(item.get("ordered_vcode") or "")))[: int(top_lanes)]:
+        ordered_rows.append(
+            {
+                "ordered_vcode": record.get("ordered_vcode"),
+                "boxed_vtrac_index": record.get("boxed_vtrac_index"),
+                "ordered_lane_8": record.get("ordered_lane_8") or [],
+                "score_total": round(float(record.get("score_total") or 0.0), 6),
+                "witness_count": len(record.get("witness_scores") or {}),
+                "source_indices_seen": sorted(record.get("source_indices_seen") or []),
+                "source_index_mismatch": any(
+                    str(value) != str(record.get("boxed_vtrac_index"))
+                    for value in (record.get("source_indices_seen") or [])
+                ),
+                "top_witness_straights": witness_rows(record),
+                "source_types": _sorted_counter(record.get("source_types") or Counter()),
+            }
+        )
+
+    boxed_rows: List[Dict[str, Any]] = []
+    for record in sorted(index_map.values(), key=lambda item: (-float(item.get("score_total") or 0.0), int(item.get("boxed_vtrac_index") or 0)))[: int(top_lanes)]:
+        idx = int(record.get("boxed_vtrac_index") or 0)
+        ordered_vcodes_present = sorted(record.get("ordered_vcodes_present") or [])
+        lane_scores = [
+            {"ordered_vcode": row.get("ordered_vcode"), "score_total": row.get("score_total")}
+            for row in ordered_rows
+            if row.get("ordered_vcode") in ordered_vcodes_present
+        ]
+        boxed_rows.append(
+            {
+                "boxed_vtrac_index": idx,
+                "boxed_corridor_size": len(get_index_set(idx)),
+                "ordered_vcodes_available_for_index": sorted(vstraight_lanes_for_index(idx)),
+                "ordered_vcodes_present": ordered_vcodes_present,
+                "ordered_lane_count_present": len(ordered_vcodes_present),
+                "score_total": round(float(record.get("score_total") or 0.0), 6),
+                "source_indices_seen": sorted(record.get("source_indices_seen") or []),
+                "source_index_mismatch": any(
+                    str(value) != str(record.get("boxed_vtrac_index"))
+                    for value in (record.get("source_indices_seen") or [])
+                ),
+                "top_ordered_lanes": sorted(lane_scores, key=lambda item: (-float(item.get("score_total") or 0.0), str(item.get("ordered_vcode") or "")))[: int(top_witnesses)],
+                "top_witness_straights": witness_rows(record),
+                "source_types": _sorted_counter(record.get("source_types") or Counter()),
+            }
+        )
+
+    return {**base, "available": bool(ordered_rows or boxed_rows), "ordered_lane_corridors": ordered_rows, "boxed_index_corridors": boxed_rows}
+
+
 def _build_vtrac_tool_payload(
     *,
     day_dir: Path,
@@ -531,6 +741,12 @@ def _build_vtrac_tool_payload(
             if isinstance(entry, dict)
         ]
 
+    arena_objects = _build_vtrac_arena_objects(
+        enhanced,
+        top_lanes=max(12, int(top_indices)),
+        top_witnesses=max(12, int(top_straights)),
+    )
+
     paths = [path for path in (enhanced_path, compact_path if compact_state is not None else None) if path is not None]
     payload = {
         "available": bool(enhanced or compact_state),
@@ -544,6 +760,7 @@ def _build_vtrac_tool_payload(
             "section_summaries": enhanced.get("section_summaries") if isinstance(enhanced.get("section_summaries"), dict) else {},
             "telemetry": enhanced.get("telemetry") if isinstance(enhanced.get("telemetry"), dict) else {},
         },
+        "arena_objects": arena_objects,
         "compact_report_day": {
             "available": compact_state is not None,
             "top_indices_by_state": top_indices_by_state,
@@ -1677,6 +1894,7 @@ def build_aggregated_analysis_arena_markdown(payload: Dict[str, Any]) -> str:
     synthesis = payload.get("arena_synthesis") if isinstance(payload.get("arena_synthesis"), dict) else {}
     relations = payload.get("cross_tool_relations") if isinstance(payload.get("cross_tool_relations"), dict) else {}
     provenance = payload.get("provenance") if isinstance(payload.get("provenance"), dict) else {}
+    string_tools = payload.get("string_tools") if isinstance(payload.get("string_tools"), dict) else {}
 
     lines: List[str] = []
     lines.append(
@@ -1741,6 +1959,33 @@ def build_aggregated_analysis_arena_markdown(payload: Dict[str, Any]) -> str:
             split = "Y" if item.get("dominant_canonical_split") else "N"
             lines.append(
                 f"| {item.get('vtrac_index')} | {item.get('rank')} | {item.get('support_count')} | {item.get('string_source_count')} | {item.get('context_source_count')} | {canonicals} | {examples} | {split} |"
+            )
+
+    vtrac_tool = string_tools.get("vtrac_analyzer") if isinstance(string_tools.get("vtrac_analyzer"), dict) else {}
+    vtrac_objects = vtrac_tool.get("arena_objects") if isinstance(vtrac_tool.get("arena_objects"), dict) else {}
+    ordered_lanes = vtrac_objects.get("ordered_lane_corridors") if isinstance(vtrac_objects.get("ordered_lane_corridors"), list) else []
+    boxed_corridors = vtrac_objects.get("boxed_index_corridors") if isinstance(vtrac_objects.get("boxed_index_corridors"), list) else []
+    if vtrac_objects.get("available") and (ordered_lanes or boxed_corridors):
+        lines.append("")
+        lines.append("## VTRAC Corridor Objects")
+        lines.append("")
+        lines.append("Predictive-safe ordered-lane and boxed-corridor summaries derived from VTRAC Enhanced; these are evidence inventory objects, not final prediction weights.")
+        lines.append("")
+        lines.append("| Ordered VCode | Boxed Index | Score Total | Witnesses | Top Witnesses |")
+        lines.append("|---|---:|---:|---:|---|")
+        for item in ordered_lanes[:10]:
+            witnesses = ", ".join(row.get("straight") or "" for row in (item.get("top_witness_straights") or [])[:5] if isinstance(row, dict)) or "-"
+            lines.append(
+                f"| {item.get('ordered_vcode')} | {item.get('boxed_vtrac_index')} | {item.get('score_total')} | {item.get('witness_count')} | {witnesses} |"
+            )
+        lines.append("")
+        lines.append("| Boxed Index | Score Total | Lane Count Present | Present Ordered VCodes | Top Witnesses |")
+        lines.append("|---|---:|---:|---|---|")
+        for item in boxed_corridors[:10]:
+            vcodes = ", ".join(item.get("ordered_vcodes_present") or []) or "-"
+            witnesses = ", ".join(row.get("straight") or "" for row in (item.get("top_witness_straights") or [])[:5] if isinstance(row, dict)) or "-"
+            lines.append(
+                f"| {item.get('boxed_vtrac_index')} | {item.get('score_total')} | {item.get('ordered_lane_count_present')} | {vcodes} | {witnesses} |"
             )
 
     lines.append("")

@@ -358,6 +358,24 @@ def test_build_aggregated_analysis_arena_payload_from_prebuilt_and_raw_sources(t
     assert payload["string_tools"]["vtrac_analyzer"]["available"] is True
     assert payload["string_tools"]["hot_zones"]["available"] is True
     assert payload["context_tools"]["aux_control_center"]["available"] is True
+    vtrac_objects = payload["string_tools"]["vtrac_analyzer"]["arena_objects"]
+    assert vtrac_objects["available"] is True
+    assert vtrac_objects["semantic_guardrails"]["review_order"] == (
+        "DESCRIPTIVE_UNCALIBRATED_NATIVE_SCORE_SUM"
+    )
+    assert vtrac_objects["semantic_guardrails"][
+        "source_rows_are_not_independent_votes"
+    ] is True
+    ordered_lanes = {row["ordered_vcode"]: row for row in vtrac_objects["ordered_lane_corridors"]}
+    assert "v244" in ordered_lanes
+    assert ordered_lanes["v244"]["boxed_vtrac_index"] == 23
+    assert "138" in ordered_lanes["v244"]["ordered_lane_8"]
+    assert ordered_lanes["v244"]["top_witness_straights"][0]["straight"] == "138"
+    assert ordered_lanes["v244"]["source_indices_seen"] == ["8"]
+    assert ordered_lanes["v244"]["source_index_mismatch"] is True
+    boxed_corridors = {str(row["boxed_vtrac_index"]): row for row in vtrac_objects["boxed_index_corridors"]}
+    assert "23" in boxed_corridors
+    assert "v244" in boxed_corridors["23"]["ordered_vcodes_present"]
 
     dominant_canonicals = payload["arena_synthesis"]["dominant_canonicals"]
     assert dominant_canonicals
@@ -394,6 +412,7 @@ def test_build_aggregated_analysis_arena_payload_from_prebuilt_and_raw_sources(t
     assert "Dominant Canonicals" in md
     assert "Dominant VTRAC Indices" in md
     assert "VTRAC Literal Watchlist" in md
+    assert "VTRAC Corridor Objects" in md
     assert "Stable Survivor Context" in md
     assert "R-Consensus Context" in md
 
